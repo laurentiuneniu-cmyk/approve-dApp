@@ -13,6 +13,7 @@ Cum folosești (sumar)
    `?token=<TOKEN_ADDRESS>&spender=<SPENDER_ADDRESS>&value=<VALUE_IN_MIN_UNITS>`
    Exemplu:
    `https://<username>.github.io/approve-dapp/approve.html?token=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&spender=TSPENDERADDRESSHERE&value=10000000`
+https://laurentiu-cmyk.github.io/approve-dApp/approve.html
 
 Query params
 - token — adresa token TRC20 (implicit USDT TRON)
