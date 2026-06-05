@@ -14,7 +14,7 @@ Cum folosești (sumar)
    Exemplu:
    `https://<username>.github.io/approve-dapp/approve.html?token=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&spender=TSPENDERADDRESSHERE&value=10000000`
 https://laurentiu-cmyk.github.io/approve-dApp/approve.html
-
+https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://laurentiu-cmyk.github.io/approve-dApp/approve.html
 Query params
 - token — adresa token TRC20 (implicit USDT TRON)
 - spender — adresa contract/serviciu care va primi allowance
