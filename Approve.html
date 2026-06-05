@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Approve USDT (TRON)</title></head>
+<body>
+<h3>Approve token (Trust Wallet dApp)</h3>
+<div id="status">Aștept tronWeb...</div>
+<button id="approveBtn" disabled>Trimite approve</button>
+
+<script src="https://unpkg.com/tronweb/dist/TronWeb.js"></script>
+<script>
+(async function(){
+  // Default valori (poți suprascrie prin query params)
+  const DEFAULT_TOKEN = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"; // USDT mainnet
+  const DEFAULT_SPENDER = "TSPENDERADDRESSHERE";
+  const DEFAULT_VALUE = "10000000"; // 10 USDT (6 zecimale)
+
+  // Citire query params
+  const qs = new URLSearchParams(location.search);
+  const TOKEN = qs.get('token') || DEFAULT_TOKEN;
+  const SPENDER = qs.get('spender') || DEFAULT_SPENDER;
+  const VALUE = qs.get('value') || DEFAULT_VALUE;
+
+  const status = id => document.getElementById('status').innerText = id;
+  const btn = document.getElementById('approveBtn');
+
+  // Wait for injected tronWeb (Trust Wallet dApp injectează tronWeb)
+  function waitTronWeb(timeout = 20000) {
+    return new Promise((res, rej) => {
+      const start = Date.now();
+      (function check(){
+        if (window.tronWeb && window.tronWeb.ready) return res(window.tronWeb);
+        if (Date.now() - start > timeout) return rej(new Error('tronWeb not found'));
+        setTimeout(check, 300);
+      })();
+    });
+  }
+
+  try {
+    status('Aștept tronWeb (deschide în Trust Wallet dApp)...');
+    const tronWeb = await waitTronWeb();
+    status('Conectat: ' + tronWeb.defaultAddress.base58);
+    btn.disabled = false;
+
+    btn.onclick = async () => {
+      try {
+        btn.disabled = true;
+        status('Construiesc tranzacție approve...');
+        const from = tronWeb.defaultAddress.base58;
+        const params = [
+          {type: 'address', value: SPENDER},
+          {type: 'uint256', value: VALUE}
+        ];
+        // build triggerSmartContract
+        const txResp = await tronWeb.transactionBuilder.triggerSmartContract(
+          TOKEN,
+          'approve(address,uint256)',
+          {feeLimit: 100000000, callValue: 0},
+          params,
+          from
+        );
+        if (!txResp || !txResp.result || txResp.result.result !== true) {
+          throw new Error('Eroare construire tx: ' + JSON.stringify(txResp));
+        }
+        const unsignedTx = txResp.transaction;
+        status('Cerere de semnare în Trust Wallet...');
+        // Ask wallet to sign and broadcast (Trust Wallet injectează sign/send)
+        const signed = await tronWeb.trx.sign(unsignedTx);
+        const receipt = await tronWeb.trx.sendRawTransaction(signed);
+        if (receipt.result) {
+          status('Trimis OK. TxID: ' + receipt.txid);
+        } else {
+          throw new Error('Eroare trimitere: ' + JSON.stringify(receipt));
+        }
+      } catch (err) {
+        status('Eroare: ' + (err.message || JSON.stringify(err)));
+        btn.disabled = false;
+      }
+    };
+  } catch (e) {
+    status('tronWeb nu a fost detectat: deschide această pagină în Trust Wallet dApp.');
+  }
+})();
+</script>
+</body>
+</html>
