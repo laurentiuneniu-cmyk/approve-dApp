@@ -48,3 +48,9 @@ Licență
 Contact / suport
 - Pune aici contactul sau issues în GitHub repo pentru întrebări.
 
+## Deschide dApp
+
+URL: https://laurentiu-cmyk.github.io/approve-dApp/approve.html
+
+Scan:
+![QR](https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://laurentiu-cmyk.github.io/approve-dApp/approve.html)
