@@ -122,6 +122,7 @@
         await QRCode.toCanvas(canvas, link, { width: 800 });
        
         canvas.toBlob(function(blob) {
+          
           const a = document.createElement('a');
           const url = URL.createObjectURL(blob);
           
