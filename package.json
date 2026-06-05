@@ -1,0 +1,11 @@
+{
+  "name": "trc20-approve-dapp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "serve . -s"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
