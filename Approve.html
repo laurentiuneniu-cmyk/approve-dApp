@@ -116,11 +116,9 @@
 
     downloadQrBtn.onclick = async () => {
       const link = buildLink();
-      // regen canvas to ensure up-to-date
       try {
         const canvas = document.createElement('canvas');
         await QRCode.toCanvas(canvas, link, { width: 800 });
-        // convert to blob and download
         canvas.toBlob(function(blob) {
           const a = document.createElement('a');
           const url = URL.createObjectURL(blob);
