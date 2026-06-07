@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Approve USDT (TRON) — Demo</title>
+<title>Approve USDT (TRC20) — Demo</title>
 <style>
   :root{--bg:#0b1220;--card:#071028;--accent:#06b6d4;--muted:#94a3b8}
   html,body{height:100%;margin:0;background:var(--bg);font-family:system-ui,Segoe UI,Roboto;color:#fff}
@@ -21,6 +21,9 @@
   #status{margin-top:12px;color:var(--muted);font-size:13px}
   pre{background:#041122;padding:10px;border-radius:8px;overflow:auto;color:#cfeefb;max-height:220px}
 </style>
+
+<!-- include QR library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -56,18 +59,24 @@
     </div>
   </div>
 
-  <!-- Include a small QR generator: qrcode-generator minimal or fallback text -->
   <script>
   (function(){
     function makeQRsvg(text){
-      // try to use window.qrcode if present (some builds may not include), else use simple fallback (text)
       try{
         if(window.qrcode && typeof window.qrcode === 'function'){
           var qr = window.qrcode(4,'M'); qr.addData(text); qr.make();
           var m = qr.moduleCount;
-          var svg = '<svg viewBox="0 0 '+m+' '+m+'" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">';
+          var scale = Math.max(1, Math.floor(180 / m));
+          var width = m * scale;
+          var svg = '<svg width="'+width+'" height="'+width+'" viewBox="0 0 '+(m*scale)+' '+(m*scale)+'" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">';
           svg += '<rect width="100%" height="100%" fill="#fff"/><g fill="#000">';
-          for(var r=0;r<m;r++) for(var c=0;c<m;c++) if(qr.isDark(r,c)) svg += '<rect x="'+c+'" y="'+r+'" width="1" height="1"/>';
+          for(var r=0;r<m;r++){
+            for(var c=0;c<m;c++){
+              if(qr.isDark(r,c)){
+                svg += '<rect x="'+(c*scale)+'" y="'+(r*scale)+'" width="'+scale+'" height="'+scale+'"/>';
+              }
+            }
+          }
           svg += '</g></svg>';
           return svg;
         }
