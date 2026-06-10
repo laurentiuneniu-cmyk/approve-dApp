@@ -1,11 +1,10 @@
 {
-  "name": "trc20-approve-dapp",
-  "version": "0.1.0",
+  "name": "stable-tron-dapp",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "serve . -s"
+    "start": "vercel dev",
+    "build": "echo build not required for static site"
   },
-  "devDependencies": {
-    "serve": "^14.2.0"
-  }
+  "dependencies": {}
 }
